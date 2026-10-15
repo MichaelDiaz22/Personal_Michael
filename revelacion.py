@@ -1502,24 +1502,19 @@ def juego_rompe_ladrillos():
 
       function loop() {{
         if (!running) return;
-        // Mover bola
         ball.x += ball.vx;
         ball.y += ball.vy;
 
-        // Rebotes paredes
         if (ball.x - ball.r < 0 || ball.x + ball.r > W) ball.vx = -ball.vx;
         if (ball.y - ball.r < 0) ball.vy = -ball.vy;
 
-        // Paddle
         if (ball.y + ball.r >= paddle.y && ball.y + ball.r <= paddle.y + paddle.h + 8 &&
             ball.x >= paddle.x && ball.x <= paddle.x + paddle.w && ball.vy > 0) {{
           ball.vy = -Math.abs(ball.vy);
-          // Ángulo según posición
           const rel = (ball.x - (paddle.x + paddle.w / 2)) / (paddle.w / 2);
           ball.vx = rel * 4;
         }}
 
-        // Ladrillos
         for (const b of bricks) {{
           if (!b.alive) continue;
           if (ball.x + ball.r > b.x && ball.x - ball.r < b.x + b.w &&
@@ -1540,7 +1535,6 @@ def juego_rompe_ladrillos():
           }}
         }}
 
-        // Perder
         if (ball.y - ball.r > H) {{
           running = false;
           msg.className = 'error';
@@ -1555,7 +1549,6 @@ def juego_rompe_ladrillos():
       function draw() {{
         ctx.clearRect(0, 0, W, H);
 
-        // Ladrillos
         for (const b of bricks) {{
           if (!b.alive) continue;
           const grad = ctx.createLinearGradient(b.x, b.y, b.x + b.w, b.y + b.h);
@@ -1565,7 +1558,6 @@ def juego_rompe_ladrillos():
           ctx.fillRect(b.x, b.y, b.w, b.h);
         }}
 
-        // Paddle rosa
         const pg = ctx.createLinearGradient(paddle.x, 0, paddle.x + paddle.w, 0);
         pg.addColorStop(0, '#ffd1e3');
         pg.addColorStop(1, '#c2185b');
@@ -1574,7 +1566,6 @@ def juego_rompe_ladrillos():
         ctx.roundRect(paddle.x, paddle.y, paddle.w, paddle.h, 6);
         ctx.fill();
 
-        // Bola
         const bg = ctx.createRadialGradient(ball.x - 2, ball.y - 2, 1, ball.x, ball.y, ball.r);
         bg.addColorStop(0, '#ff9ec4');
         bg.addColorStop(1, '#c2185b');
@@ -1589,8 +1580,7 @@ def juego_rompe_ladrillos():
     </body>
     </html>
     """
-    components.html(rompe_ladrillos_html, height=720)
-
+    components.html(breakout_html, height=720)
 
 # ============================================================
 # 10. TRAGAMONEDAS
