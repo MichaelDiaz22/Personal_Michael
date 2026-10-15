@@ -7,6 +7,10 @@ st.set_page_config(
     layout="centered"
 )
 
+# ---------- Estado global para reinicio ----------
+if "reset_seed" not in st.session_state:
+    st.session_state.reset_seed = 0
+
 # ---------- Estilos globales ----------
 st.markdown("""
 <style>
@@ -21,7 +25,7 @@ st.markdown("""
   .subtitle {
     text-align: center;
     color: #666;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
   }
 </style>
 """, unsafe_allow_html=True)
@@ -31,50 +35,60 @@ st.markdown('<div class="main-title">🎀 Revelación de Género 💙</div>',
 st.markdown('<div class="subtitle">Elige un juego para descubrir la sorpresa</div>',
             unsafe_allow_html=True)
 
+# ---------- Botón de reinicio global ----------
+col1, col2, col3 = st.columns([1, 2, 1])
+with col2:
+    if st.button("🔄 Reiniciar todos los juegos", use_container_width=True):
+        st.session_state.reset_seed += 1
+        st.rerun()
+
+SEED = st.session_state.reset_seed
+
 
 # ============================================================
-# 1. RASCA Y GANA (más grande, mínimo 10 segundos)
+# 1. RASCA Y GANA
 # ============================================================
 def juego_rasca():
-    scratch_html = """
+    scratch_html = f"""
+    <!-- seed:{SEED} -->
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body { margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff; }
-      #wrap {
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff; }}
+      #wrap {{
         position: relative; width: 480px; height: 340px;
         border-radius: 16px; overflow: hidden;
         box-shadow: 0 6px 20px rgba(0,0,0,.18);
         touch-action: none;
-      }
-      #reveal {
+      }}
+      #reveal {{
         position: absolute; inset: 0;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         background: linear-gradient(135deg, #ffd1e3, #cfe4ff);
         color: #c2185b; text-align: center;
-      }
-      #reveal .emoji { font-size: 60px; }
-      #reveal h1 { margin: 4px 0; font-size: 46px; }
-      #reveal p  { margin: 0; font-size: 30px; color: #2a4d8f; font-weight: bold; }
-      #cover {
+      }}
+      #reveal .emoji {{ font-size: 60px; }}
+      #reveal h1 {{ margin: 4px 0; font-size: 46px; }}
+      #reveal p  {{ margin: 0; font-size: 30px; color: #2a4d8f; font-weight: bold; }}
+      #cover {{
         position: absolute; inset: 0;
         background: #b0b0b0; cursor: crosshair;
-      }
-      #hint {
+      }}
+      #hint {{
         position: absolute; top: 8px; left: 50%;
         transform: translateX(-50%);
         background: rgba(0,0,0,.55); color: #fff;
         padding: 4px 12px; border-radius: 12px;
         font-size: 13px; pointer-events: none;
-      }
-      #resetBtn {
+      }}
+      #resetBtn {{
         margin-top: 14px; padding: 8px 22px;
         border: 1px solid #999; background: #fff;
         border-radius: 6px; cursor: pointer; font-size: 14px;
-      }
+      }}
     </style>
     </head>
     <body>
@@ -96,9 +110,9 @@ def juego_rasca():
       let drawing = false;
       let scratchingTime = 0;
       let lastTick = 0;
-      const MIN_MS = 10000; // 10 s
+      const MIN_MS = 10000;
 
-      function paintCover() {
+      function paintCover() {{
         ctx.globalCompositeOperation = 'source-over';
         ctx.fillStyle = '#b0b0b0';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -109,121 +123,122 @@ def juego_rasca():
         ctx.font = '14px sans-serif';
         ctx.fillText('(mínimo 10 segundos)', canvas.width/2, canvas.height/2 + 16);
         ctx.globalCompositeOperation = 'destination-out';
-      }
+      }}
 
-      function reset() {
+      function reset() {{
         scratchingTime = 0;
         lastTick = 0;
         canvas.style.display = 'block';
         canvas.style.opacity = 1;
         canvas.style.transition = 'none';
+        hint.style.display = 'block';
         hint.textContent = 'Rasca al menos 10 segundos 👆';
         paintCover();
-      }
+      }}
 
       paintCover();
 
-      function pos(e) {
+      function pos(e) {{
         const r = canvas.getBoundingClientRect();
         const t = e.touches ? e.touches[0] : e;
-        return {
+        return {{
           x: (t.clientX - r.left) * (canvas.width / r.width),
           y: (t.clientY - r.top) * (canvas.height / r.height)
-        };
-      }
+        }};
+      }}
 
-      function scratch(e) {
+      function scratch(e) {{
         if (!drawing) return;
         const now = performance.now();
         if (lastTick) scratchingTime += now - lastTick;
         lastTick = now;
 
-        const { x, y } = pos(e);
+        const {{ x, y }} = pos(e);
         ctx.beginPath();
         ctx.arc(x, y, 28, 0, Math.PI * 2);
         ctx.fill();
 
         const remaining = Math.max(0, (MIN_MS - scratchingTime) / 1000).toFixed(1);
-        hint.textContent = `Rascando... faltan ${remaining}s`;
+        hint.textContent = `Rascando... faltan ${{remaining}}s`;
 
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         let clear = 0;
         for (let i = 3; i < data.length; i += 4) if (data[i] < 40) clear++;
         const pct = clear / (canvas.width * canvas.height);
 
-        if (pct > 0.55 && scratchingTime >= MIN_MS) {
+        if (pct > 0.55 && scratchingTime >= MIN_MS) {{
           canvas.style.transition = 'opacity .8s';
           canvas.style.opacity = 0;
           hint.style.display = 'none';
           setTimeout(() => canvas.style.display = 'none', 800);
-        } else if (pct > 0.55 && scratchingTime < MIN_MS) {
-          hint.textContent = `Sigue rascando... faltan ${remaining}s`;
-        }
-      }
+        }} else if (pct > 0.55 && scratchingTime < MIN_MS) {{
+          hint.textContent = `Sigue rascando... faltan ${{remaining}}s`;
+        }}
+      }}
 
-      canvas.addEventListener('mousedown', e => {
+      canvas.addEventListener('mousedown', e => {{
         drawing = true; lastTick = performance.now(); scratch(e);
-      });
+      }});
       canvas.addEventListener('mousemove', scratch);
-      window.addEventListener('mouseup', () => { drawing = false; lastTick = 0; });
+      window.addEventListener('mouseup', () => {{ drawing = false; lastTick = 0; }});
 
-      canvas.addEventListener('touchstart', e => {
+      canvas.addEventListener('touchstart', e => {{
         e.preventDefault(); drawing = true; lastTick = performance.now(); scratch(e);
-      });
-      canvas.addEventListener('touchmove', e => { e.preventDefault(); scratch(e); });
-      window.addEventListener('touchend', () => { drawing = false; lastTick = 0; });
+      }});
+      canvas.addEventListener('touchmove', e => {{ e.preventDefault(); scratch(e); }});
+      window.addEventListener('touchend', () => {{ drawing = false; lastTick = 0; }});
     </script>
     </body>
     </html>
     """
-    components.html(scratch_html, height=440, key="rasca")
+    components.html(scratch_html, height=440)
 
 
 # ============================================================
 # 2. MEMORAMA (15 parejas = 30 cartas)
 # ============================================================
 def juego_memorama():
-    memory_html = """
+    memory_html = f"""
+    <!-- seed:{SEED} -->
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body { margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff; }
-      #grid {
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff; }}
+      #grid {{
         display: grid; grid-template-columns: repeat(6, 1fr);
-        gap: 8px; margin-top: 10px;
-        max-width: 640px;
-      }
-      .card { aspect-ratio: 1/1; perspective: 600px; cursor: pointer; }
-      .inner {
+        gap: 8px; margin-top: 10px; max-width: 640px;
+      }}
+      .card {{ aspect-ratio: 1/1; perspective: 600px; cursor: pointer; }}
+      .inner {{
         position: relative; width: 100%; height: 100%;
         transition: transform .4s; transform-style: preserve-3d;
-      }
-      .card.flipped .inner, .card.matched .inner { transform: rotateY(180deg); }
-      .face, .back {
+      }}
+      .card.flipped .inner, .card.matched .inner {{ transform: rotateY(180deg); }}
+      .face, .back {{
         position: absolute; inset: 0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
         font-size: 28px; backface-visibility: hidden;
-      }
-      .face {
+      }}
+      .face {{
         background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
         color: #fff; font-size: 22px;
-      }
-      .back {
+      }}
+      .back {{
         background: #fff; border: 2px solid #cfe4ff;
         transform: rotateY(180deg);
-      }
-      .card.matched .back { border-color: #ffb3d1; background: #fff0f7; }
-      #msg {
+      }}
+      .card.matched .back {{ border-color: #ffb3d1; background: #fff0f7; }}
+      #msg {{
         margin-top: 18px; font-size: 22px; color: #c2185b;
         min-height: 30px; text-align: center;
-      }
-      #info { margin-top: 8px; color: #666; font-size: 14px; }
-      button {
+      }}
+      #info {{ margin-top: 8px; color: #666; font-size: 14px; }}
+      button {{
         margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
         background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
-      }
+      }}
     </style>
     </head>
     <body>
@@ -243,90 +258,91 @@ def juego_memorama():
       const msg = document.getElementById('msg');
       const pairsEl = document.getElementById('pairs');
 
-      function build() {
+      function build() {{
         grid.innerHTML = '';
         msg.innerHTML = '';
         matched = 0; first = null; lock = false;
         pairsEl.textContent = '0';
         const cards = [...ICONS, ...ICONS].sort(() => Math.random() - 0.5);
-        cards.forEach(icon => {
+        cards.forEach(icon => {{
           const c = document.createElement('div');
           c.className = 'card';
           c.innerHTML = `<div class="inner">
               <div class="face">?</div>
-              <div class="back">${icon}</div>
+              <div class="back">${{icon}}</div>
             </div>`;
           c.onclick = () => flip(c);
           grid.appendChild(c);
-        });
-      }
+        }});
+      }}
 
-      function flip(card) {
+      function flip(card) {{
         if (lock || card.classList.contains('flipped') ||
             card.classList.contains('matched')) return;
         card.classList.add('flipped');
-        if (!first) { first = card; return; }
+        if (!first) {{ first = card; return; }}
         if (first.querySelector('.back').textContent ===
-            card.querySelector('.back').textContent) {
+            card.querySelector('.back').textContent) {{
           first.classList.add('matched'); card.classList.add('matched');
           matched++; first = null;
           pairsEl.textContent = matched;
-          if (matched === 15) {
+          if (matched === 15) {{
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
-          }
-        } else {
+          }}
+        }} else {{
           lock = true;
-          setTimeout(() => {
+          setTimeout(() => {{
             first.classList.remove('flipped');
             card.classList.remove('flipped');
             first = null; lock = false;
-          }, 700);
-        }
-      }
+          }}, 700);
+        }}
+      }}
 
-      function reset() { build(); }
+      function reset() {{ build(); }}
       build();
     </script>
     </body>
     </html>
     """
-    components.html(memory_html, height=680, key="memory")
+    components.html(memory_html, height=680)
 
 
 # ============================================================
-# 3. ROMPECABEZAS (números + colores, revela al resolver)
+# 3. ROMPECABEZAS (números + colores)
 # ============================================================
 def juego_rompecabezas():
-    puzzle_html = """
+    puzzle_html = f"""
+    <!-- seed:{SEED} -->
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body { margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff; }
-      #board {
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff; }}
+      #board {{
         display: grid;
         grid-template-columns: repeat(3, 110px);
         grid-template-rows: repeat(3, 110px);
         gap: 3px; background: #ddd; padding: 4px;
         border-radius: 10px; touch-action: none; user-select: none;
-      }
-      .tile {
+      }}
+      .tile {{
         display: flex; align-items: center; justify-content: center;
         font-size: 34px; font-weight: bold; color: #fff;
         cursor: pointer; border-radius: 6px;
         transition: transform .15s;
-      }
-      .tile:hover { transform: scale(0.96); }
-      .tile.empty { background: #f5f5f5 !important; cursor: default; }
-      #msg {
+      }}
+      .tile:hover {{ transform: scale(0.96); }}
+      .tile.empty {{ background: #f5f5f5 !important; cursor: default; }}
+      #msg {{
         margin-top: 18px; font-size: 24px; color: #c2185b;
         min-height: 40px; text-align: center; line-height: 1.3;
-      }
-      button {
+      }}
+      button {{
         margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
         background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
-      }
+      }}
     </style>
     </head>
     <body>
@@ -344,70 +360,70 @@ def juego_rompecabezas():
       let board = [];
       let solved = false;
 
-      function createSolved() {
+      function createSolved() {{
         board = [];
         for (let i = 1; i < SIZE * SIZE; i++) board.push(i);
         board.push(0);
-      }
+      }}
 
-      function shuffleBoard() {
-        do {
+      function shuffleBoard() {{
+        do {{
           board = [...Array(SIZE * SIZE).keys()];
-          for (let i = board.length - 1; i > 0; i--) {
+          for (let i = board.length - 1; i > 0; i--) {{
             const j = Math.floor(Math.random() * (i + 1));
             [board[i], board[j]] = [board[j], board[i]];
-          }
-        } while (!isSolvable(board) || isSolved());
+          }}
+        }} while (!isSolvable(board) || isSolved());
         solved = false;
         document.getElementById('msg').innerHTML = '';
         render();
-      }
+      }}
 
-      function isSolvable(arr) {
+      function isSolvable(arr) {{
         const a = arr.filter(x => x !== 0);
         let inv = 0;
         for (let i = 0; i < a.length; i++)
           for (let j = i + 1; j < a.length; j++)
             if (a[i] > a[j]) inv++;
         return inv % 2 === 0;
-      }
+      }}
 
-      function isSolved() {
+      function isSolved() {{
         for (let i = 0; i < SIZE * SIZE - 1; i++)
           if (board[i] !== i + 1) return false;
         return board[SIZE * SIZE - 1] === 0;
-      }
+      }}
 
-      function render() {
+      function render() {{
         const b = document.getElementById('board');
         b.innerHTML = '';
-        board.forEach((val, idx) => {
+        board.forEach((val, idx) => {{
           const d = document.createElement('div');
           d.className = 'tile' + (val === 0 ? ' empty' : '');
-          if (val !== 0) {
+          if (val !== 0) {{
             d.textContent = val;
             d.style.background = COLORS[(val - 1) % COLORS.length];
-          }
+          }}
           d.onclick = () => onClick(idx);
           b.appendChild(d);
-        });
-      }
+        }});
+      }}
 
-      function onClick(idx) {
+      function onClick(idx) {{
         if (solved) return;
         const empty = board.indexOf(0);
         const r1 = Math.floor(idx / SIZE), c1 = idx % SIZE;
         const r2 = Math.floor(empty / SIZE), c2 = empty % SIZE;
-        if (Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1) {
+        if (Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1) {{
           [board[idx], board[empty]] = [board[empty], board[idx]];
           render();
-          if (isSolved()) {
+          if (isSolved()) {{
             solved = true;
             document.getElementById('msg').innerHTML =
               '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
-          }
-        }
-      }
+          }}
+        }}
+      }}
 
       createSolved();
       shuffleBoard();
@@ -415,51 +431,53 @@ def juego_rompecabezas():
     </body>
     </html>
     """
-    components.html(puzzle_html, height=560, key="puzzle")
+    components.html(puzzle_html, height=560)
 
 
 # ============================================================
-# 4. GLOBO SORPRESA (clic muchas veces para inflar y explotar)
+# 4. GLOBO SORPRESA
 # ============================================================
 def juego_globo():
-    balloon_html = """
+    balloon_html = f"""
+    <!-- seed:{SEED} -->
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body { margin: 0; display: flex; flex-direction: column;
+      body {{ margin: 0; display: flex; flex-direction: column;
              align-items: center; font-family: sans-serif; background: #fff;
-             padding: 10px; }
-      #stage {
+             padding: 10px; }}
+      #stage {{
         position: relative; width: 100%; max-width: 480px; height: 360px;
         display: flex; align-items: center; justify-content: center;
         touch-action: manipulation;
-      }
-      #balloon {
-        width: 90px; height: 110px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+      }}
+      #balloon {{
+        width: 90px; height: 110px;
+        border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
         background: radial-gradient(circle at 30% 30%, #ff8fb1, #c2185b);
         cursor: pointer; transition: all .15s ease-out;
         position: relative;
-      }
-      #balloon::after {
+      }}
+      #balloon::after {{
         content: ''; position: absolute; bottom: -14px; left: 50%;
         transform: translateX(-50%);
         width: 2px; height: 16px; background: #888;
-      }
-      #hint { color: #666; font-size: 14px; margin-top: 10px; }
-      #msg {
+      }}
+      #hint {{ color: #666; font-size: 14px; margin-top: 10px; }}
+      #msg {{
         margin-top: 14px; font-size: 24px; color: #c2185b;
         min-height: 40px; text-align: center; line-height: 1.3;
-      }
-      button {
+      }}
+      button {{
         margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
         background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
-      }
-      @keyframes pop {
-        0% { transform: scale(1); opacity: 1; }
-        100% { transform: scale(2.2); opacity: 0; }
-      }
-      .pop { animation: pop .4s ease-out forwards; }
+      }}
+      @keyframes pop {{
+        0% {{ transform: scale(1); opacity: 1; }}
+        100% {{ transform: scale(2.2); opacity: 0; }}
+      }}
+      .pop {{ animation: pop .4s ease-out forwards; }}
     </style>
     </head>
     <body>
@@ -478,80 +496,83 @@ def juego_globo():
       let count = 0;
       let done = false;
 
-      function update() {
+      function update() {{
         const scale = 1 + count / NEED * 1.2;
-        balloon.style.transform = `scale(${scale})`;
-        hint.textContent = `Toques: ${count} / ${NEED}`;
-      }
+        balloon.style.transform = `scale(${{scale}})`;
+        hint.textContent = `Toques: ${{count}} / ${{NEED}}`;
+      }}
 
-      balloon.addEventListener('click', () => {
+      balloon.addEventListener('click', () => {{
         if (done) return;
         count++;
         update();
-        if (count >= NEED) {
+        if (count >= NEED) {{
           done = true;
           balloon.classList.add('pop');
           msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
           hint.textContent = '¡El globo explotó! 🎉';
-        }
-      });
+        }}
+      }});
 
-      function reset() {
+      function reset() {{
         count = 0; done = false;
         balloon.classList.remove('pop');
         balloon.style.transform = 'scale(1)';
         msg.innerHTML = '';
         hint.textContent = 'Haz clic/toque el globo para inflarlo (necesitas ~20 toques)';
-      }
+        update();
+      }}
 
       update();
     </script>
     </body>
     </html>
     """
-    components.html(balloon_html, height=560, key="balloon")
+    components.html(balloon_html, height=560)
 
 
 # ============================================================
-# 5. BUSCAMINAS SUAVE (destapa celdas, encuentra la sorpresa)
+# 5. BUSCA EL BEBÉ
 # ============================================================
 def juego_buscaminas():
-    mines_html = """
+    mines_html = f"""
+    <!-- seed:{SEED} -->
     <!DOCTYPE html>
     <html>
     <head>
     <style>
-      body { margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff; }
-      #grid {
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff; }}
+      #grid {{
         display: grid; grid-template-columns: repeat(6, 60px);
         gap: 4px; margin-top: 10px;
-      }
-      .cell {
+      }}
+      .cell {{
         width: 60px; height: 60px;
         background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
         border-radius: 6px; cursor: pointer;
         display: flex; align-items: center; justify-content: center;
         font-size: 24px; transition: transform .1s;
         user-select: none;
-      }
-      .cell:active { transform: scale(0.94); }
-      .cell.safe { background: #f5f5f5; cursor: default; }
-      .cell.safe.bad { background: #ffe1e1; }
-      .cell.safe.good { background: #e2ffe9; }
-      #info { color: #666; font-size: 14px; margin-top: 8px; }
-      #msg {
+      }}
+      .cell:active {{ transform: scale(0.94); }}
+      .cell.safe {{ background: #f5f5f5; cursor: default; }}
+      .cell.safe.bad {{ background: #ffe1e1; }}
+      .cell.safe.good {{ background: #e2ffe9; }}
+      #info {{ color: #666; font-size: 14px; margin-top: 8px; }}
+      #msg {{
         margin-top: 14px; font-size: 24px; color: #c2185b;
         min-height: 40px; text-align: center; line-height: 1.3;
-      }
-      button {
+      }}
+      button {{
         margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
         background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
-      }
+      }}
     </style>
     </head>
     <body>
-      <div id="info">Encuentra las 3 celdas con 👶 · Fallos restantes: <span id="lives">3</span></div>
+      <div id="info">Encuentra las 3 celdas con 👶 · Fallos restantes:
+        <span id="lives">3</span></div>
       <div id="grid"></div>
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
@@ -559,77 +580,76 @@ def juego_buscaminas():
     <script>
       const COLS = 6, ROWS = 5;
       const TOTAL = COLS * ROWS;
-      const GIFTS = 3;       // celdas que revelan el mensaje
-      const MAX_ERRORS = 3;  // fallos permitidos
+      const GIFTS = 3;
+      const MAX_ERRORS = 3;
       let grid, lives, found, done;
 
       const gridEl = document.getElementById('grid');
       const livesEl = document.getElementById('lives');
       const msg = document.getElementById('msg');
 
-      function reset() {
+      function reset() {{
         grid = Array(TOTAL).fill(false);
-        // coloca 3 regalos al azar
         let placed = 0;
-        while (placed < GIFTS) {
+        while (placed < GIFTS) {{
           const i = Math.floor(Math.random() * TOTAL);
-          if (!grid[i]) { grid[i] = true; placed++; }
-        }
+          if (!grid[i]) {{ grid[i] = true; placed++; }}
+        }}
         lives = MAX_ERRORS;
         found = 0;
         done = false;
         livesEl.textContent = lives;
         msg.innerHTML = '';
         render();
-      }
+      }}
 
-      function render() {
+      function render() {{
         gridEl.innerHTML = '';
-        for (let i = 0; i < TOTAL; i++) {
+        for (let i = 0; i < TOTAL; i++) {{
           const c = document.createElement('div');
           c.className = 'cell';
           c.dataset.idx = i;
           c.onclick = () => reveal(i, c);
           gridEl.appendChild(c);
-        }
-      }
+        }}
+      }}
 
-      function reveal(i, el) {
+      function reveal(i, el) {{
         if (done || el.classList.contains('safe')) return;
         el.classList.add('safe');
-        if (grid[i]) {
+        if (grid[i]) {{
           el.classList.add('good');
           el.textContent = '👶';
           found++;
-          if (found === GIFTS) {
+          if (found === GIFTS) {{
             done = true;
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
-          }
-        } else {
+          }}
+        }} else {{
           el.classList.add('bad');
           el.textContent = '✖';
           lives--;
           livesEl.textContent = lives;
-          if (lives <= 0) {
+          if (lives <= 0) {{
             done = true;
-            // revela todos los regalos
-            [...gridEl.children].forEach((child, idx) => {
-              if (grid[idx]) {
+            [...gridEl.children].forEach((child, idx) => {{
+              if (grid[idx]) {{
                 child.classList.add('safe', 'good');
                 child.textContent = '👶';
-              }
-            });
-            msg.innerHTML = '😅 Se acabaron los intentos. ¡Pero mira lo que había! 🎀 <strong>María</strong> 🎀';
-          }
-        }
-      }
+              }}
+            }});
+            msg.innerHTML =
+              '😅 Se acabaron los intentos. ¡Pero mira lo que había! 🎀 <strong>María</strong> 🎀';
+          }}
+        }}
+      }}
 
       reset();
     </script>
     </body>
     </html>
     """
-    components.html(mines_html, height=580, key="mines")
+    components.html(mines_html, height=580)
 
 
 # ============================================================
