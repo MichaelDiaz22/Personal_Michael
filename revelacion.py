@@ -7,11 +7,9 @@ st.set_page_config(
     layout="centered"
 )
 
-# ---------- Estado global para reinicio ----------
 if "reset_seed" not in st.session_state:
     st.session_state.reset_seed = 0
 
-# ---------- Estilos globales ----------
 st.markdown("""
 <style>
   .main-title {
@@ -35,7 +33,6 @@ st.markdown('<div class="main-title">🎀 Revelación de Género 💙</div>',
 st.markdown('<div class="subtitle">Elige un juego para descubrir la sorpresa</div>',
             unsafe_allow_html=True)
 
-# ---------- Botón de reinicio global ----------
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
     if st.button("🔄 Reiniciar todos los juegos", use_container_width=True):
@@ -43,6 +40,114 @@ with col2:
         st.rerun()
 
 SEED = st.session_state.reset_seed
+
+
+# ============================================================
+# BLOQUE DE ANIMACIÓN DE REVELACIÓN (compartido)
+# ============================================================
+# Este script se inyecta en cada juego. Expone `window.celebrate()`.
+CELEBRATION_SCRIPT = """
+<script>
+  function celebrate(containerId) {
+    const container = containerId
+      ? document.getElementById(containerId)
+      : document.body;
+
+    // --- Overlay flash ---
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
+      position: fixed; inset: 0; z-index: 9998;
+      background: radial-gradient(circle, rgba(255,209,227,.85) 0%,
+                  rgba(207,228,255,.85) 100%);
+      animation: flashFade 1.1s ease-out forwards;
+      pointer-events: none;
+    `;
+    document.body.appendChild(overlay);
+    setTimeout(() => overlay.remove(), 1200);
+
+    // --- Partículas (confeti, corazones, estrellas) ---
+    const EMOJIS = ['🎉','🎀','💙','💗','⭐','✨','🌸','👶','🎈','💖'];
+    const N = 70;
+    for (let i = 0; i < N; i++) {
+      const p = document.createElement('div');
+      const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
+      p.textContent = emoji;
+      const startX = 50 + (Math.random() - 0.5) * 30;
+      const startY = 50 + (Math.random() - 0.5) * 20;
+      const dx = (Math.random() - 0.5) * 140;
+      const dy = (Math.random() - 0.5) * 140;
+      const rot = Math.random() * 720 - 360;
+      const size = 16 + Math.random() * 22;
+      const delay = Math.random() * 0.25;
+      p.style.cssText = `
+        position: fixed; z-index: 9999; pointer-events: none;
+        left: ${startX}%; top: ${startY}%;
+        font-size: ${size}px;
+        transform: translate(-50%, -50%);
+        opacity: 0;
+        animation: burst 1.6s ease-out ${delay}s forwards;
+        --dx: ${dx}vw; --dy: ${dy}vh; --rot: ${rot}deg;
+      `;
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 2200);
+    }
+
+    // --- Mensaje grande con zoom + bounce ---
+    const msg = document.createElement('div');
+    msg.innerHTML = `
+      <div style="font-size: 70px; line-height: 1;">🎀</div>
+      <div style="font-size: 44px; font-weight: 900;
+                  background: linear-gradient(90deg,#c2185b,#2a4d8f);
+                  -webkit-background-clip: text;
+                  -webkit-text-fill-color: transparent;
+                  margin-top: 4px;">¡Es una niña!</div>
+      <div style="font-size: 34px; color: #2a4d8f; font-weight: 700;
+                  margin-top: 2px;">María</div>
+    `;
+    msg.style.cssText = `
+      position: fixed; z-index: 10000; pointer-events: none;
+      left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0);
+      text-align: center; font-family: sans-serif;
+      background: rgba(255,255,255,.92);
+      padding: 30px 48px; border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(194,24,91,.35);
+      animation: revealPop 1.4s cubic-bezier(.2,1.5,.4,1) forwards;
+    `;
+    document.body.appendChild(msg);
+    setTimeout(() => {
+      msg.style.transition = 'opacity .6s';
+      msg.style.opacity = '0';
+      setTimeout(() => msg.remove(), 700);
+    }, 3200);
+  }
+</script>
+
+<style>
+  @keyframes flashFade {
+    0% { opacity: 0; }
+    25% { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  @keyframes burst {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.3) rotate(0);
+    }
+    15% { opacity: 1; }
+    100% {
+      opacity: 0;
+      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
+                 scale(1) rotate(var(--rot));
+    }
+  }
+  @keyframes revealPop {
+    0%   { transform: translate(-50%, -50%) scale(0) rotate(-15deg); }
+    55%  { transform: translate(-50%, -50%) scale(1.15) rotate(4deg); }
+    75%  { transform: translate(-50%, -50%) scale(0.95) rotate(-2deg); }
+    100% { transform: translate(-50%, -50%) scale(1) rotate(0); }
+  }
+</style>
+"""
 
 
 # ============================================================
@@ -73,10 +178,7 @@ def juego_rasca():
       #reveal .emoji {{ font-size: 60px; }}
       #reveal h1 {{ margin: 4px 0; font-size: 46px; }}
       #reveal p  {{ margin: 0; font-size: 30px; color: #2a4d8f; font-weight: bold; }}
-      #cover {{
-        position: absolute; inset: 0;
-        background: #b0b0b0; cursor: crosshair;
-      }}
+      #cover {{ position: absolute; inset: 0; background: #b0b0b0; cursor: crosshair; }}
       #hint {{
         position: absolute; top: 8px; left: 50%;
         transform: translateX(-50%);
@@ -103,6 +205,8 @@ def juego_rasca():
       </div>
       <button id="resetBtn" onclick="reset()">🔄 Reiniciar</button>
 
+    {CELEBRATION_SCRIPT}
+
     <script>
       const canvas = document.getElementById('cover');
       const ctx = canvas.getContext('2d');
@@ -111,6 +215,7 @@ def juego_rasca():
       let scratchingTime = 0;
       let lastTick = 0;
       const MIN_MS = 10000;
+      let celebrated = false;
 
       function paintCover() {{
         ctx.globalCompositeOperation = 'source-over';
@@ -128,6 +233,7 @@ def juego_rasca():
       function reset() {{
         scratchingTime = 0;
         lastTick = 0;
+        celebrated = false;
         canvas.style.display = 'block';
         canvas.style.opacity = 1;
         canvas.style.transition = 'none';
@@ -153,9 +259,9 @@ def juego_rasca():
         if (lastTick) scratchingTime += now - lastTick;
         lastTick = now;
 
-        const {{ x, y }} = pos(e);
+        const p = pos(e);
         ctx.beginPath();
-        ctx.arc(x, y, 28, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, 28, 0, Math.PI * 2);
         ctx.fill();
 
         const remaining = Math.max(0, (MIN_MS - scratchingTime) / 1000).toFixed(1);
@@ -171,6 +277,10 @@ def juego_rasca():
           canvas.style.opacity = 0;
           hint.style.display = 'none';
           setTimeout(() => canvas.style.display = 'none', 800);
+          if (!celebrated) {{
+            celebrated = true;
+            setTimeout(() => celebrate(), 300);
+          }}
         }} else if (pct > 0.55 && scratchingTime < MIN_MS) {{
           hint.textContent = `Sigue rascando... faltan ${{remaining}}s`;
         }}
@@ -191,11 +301,11 @@ def juego_rasca():
     </body>
     </html>
     """
-    components.html(scratch_html, height=440)
+    components.html(scratch_html, height=460)
 
 
 # ============================================================
-# 2. MEMORAMA (15 parejas = 30 cartas)
+# 2. MEMORAMA (CORREGIDO)
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -204,26 +314,42 @@ def juego_memorama():
     <html>
     <head>
     <style>
-      body {{ margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff; }}
-      #grid {{
-        display: grid; grid-template-columns: repeat(6, 1fr);
-        gap: 8px; margin-top: 10px; max-width: 640px;
+      html, body {{
+        margin: 0; padding: 0;
+        font-family: sans-serif;
+        background: #fff;
+        width: 100%;
       }}
-      .card {{ aspect-ratio: 1/1; perspective: 600px; cursor: pointer; }}
+      body {{
+        display: flex; flex-direction: column; align-items: center;
+        padding: 8px 0;
+      }}
+      #grid {{
+        display: grid;
+        grid-template-columns: repeat(6, 82px);
+        grid-template-rows: repeat(5, 82px);
+        gap: 8px;
+        justify-content: center;
+      }}
+      .card {{
+        width: 82px; height: 82px;
+        perspective: 600px; cursor: pointer;
+      }}
       .inner {{
         position: relative; width: 100%; height: 100%;
         transition: transform .4s; transform-style: preserve-3d;
       }}
-      .card.flipped .inner, .card.matched .inner {{ transform: rotateY(180deg); }}
+      .card.flipped .inner,
+      .card.matched .inner {{ transform: rotateY(180deg); }}
       .face, .back {{
         position: absolute; inset: 0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 28px; backface-visibility: hidden;
+        font-size: 34px; backface-visibility: hidden;
+        -webkit-backface-visibility: hidden;
       }}
       .face {{
         background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
-        color: #fff; font-size: 22px;
+        color: #fff; font-size: 26px;
       }}
       .back {{
         background: #fff; border: 2px solid #cfe4ff;
@@ -231,7 +357,7 @@ def juego_memorama():
       }}
       .card.matched .back {{ border-color: #ffb3d1; background: #fff0f7; }}
       #msg {{
-        margin-top: 18px; font-size: 22px; color: #c2185b;
+        margin-top: 16px; font-size: 22px; color: #c2185b;
         min-height: 30px; text-align: center;
       }}
       #info {{ margin-top: 8px; color: #666; font-size: 14px; }}
@@ -247,12 +373,14 @@ def juego_memorama():
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
 
+    {CELEBRATION_SCRIPT}
+
     <script>
       const ICONS = [
         '💙','🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
         '🦋','🌈','🍭','🩵','🎁'
       ];
-      let first = null, lock = false, matched = 0;
+      let first = null, lock = false, matched = 0, celebrated = false;
 
       const grid = document.getElementById('grid');
       const msg = document.getElementById('msg');
@@ -261,7 +389,7 @@ def juego_memorama():
       function build() {{
         grid.innerHTML = '';
         msg.innerHTML = '';
-        matched = 0; first = null; lock = false;
+        matched = 0; first = null; lock = false; celebrated = false;
         pairsEl.textContent = '0';
         const cards = [...ICONS, ...ICONS].sort(() => Math.random() - 0.5);
         cards.forEach(icon => {{
@@ -286,8 +414,10 @@ def juego_memorama():
           first.classList.add('matched'); card.classList.add('matched');
           matched++; first = null;
           pairsEl.textContent = matched;
-          if (matched === 15) {{
+          if (matched === 15 && !celebrated) {{
+            celebrated = true;
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+            setTimeout(() => celebrate(), 250);
           }}
         }} else {{
           lock = true;
@@ -305,11 +435,11 @@ def juego_memorama():
     </body>
     </html>
     """
-    components.html(memory_html, height=680)
+    components.html(memory_html, height=700)
 
 
 # ============================================================
-# 3. ROMPECABEZAS (números + colores)
+# 3. ROMPECABEZAS
 # ============================================================
 def juego_rompecabezas():
     puzzle_html = f"""
@@ -349,6 +479,8 @@ def juego_rompecabezas():
       <div id="board"></div>
       <div id="msg"></div>
       <button onclick="shuffleBoard()">🔄 Reiniciar</button>
+
+    {CELEBRATION_SCRIPT}
 
     <script>
       const SIZE = 3;
@@ -421,6 +553,7 @@ def juego_rompecabezas():
             solved = true;
             document.getElementById('msg').innerHTML =
               '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+            setTimeout(() => celebrate(), 250);
           }}
         }}
       }}
@@ -431,7 +564,7 @@ def juego_rompecabezas():
     </body>
     </html>
     """
-    components.html(puzzle_html, height=560)
+    components.html(puzzle_html, height=580)
 
 
 # ============================================================
@@ -448,7 +581,7 @@ def juego_globo():
              align-items: center; font-family: sans-serif; background: #fff;
              padding: 10px; }}
       #stage {{
-        position: relative; width: 100%; max-width: 480px; height: 360px;
+        position: relative; width: 100%; max-width: 480px; height: 340px;
         display: flex; align-items: center; justify-content: center;
         touch-action: manipulation;
       }}
@@ -488,6 +621,8 @@ def juego_globo():
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
 
+    {CELEBRATION_SCRIPT}
+
     <script>
       const balloon = document.getElementById('balloon');
       const hint = document.getElementById('hint');
@@ -511,6 +646,7 @@ def juego_globo():
           balloon.classList.add('pop');
           msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
           hint.textContent = '¡El globo explotó! 🎉';
+          setTimeout(() => celebrate(), 200);
         }}
       }});
 
@@ -577,12 +713,14 @@ def juego_buscaminas():
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
 
+    {CELEBRATION_SCRIPT}
+
     <script>
       const COLS = 6, ROWS = 5;
       const TOTAL = COLS * ROWS;
       const GIFTS = 3;
       const MAX_ERRORS = 3;
-      let grid, lives, found, done;
+      let grid, lives, found, done, celebrated;
 
       const gridEl = document.getElementById('grid');
       const livesEl = document.getElementById('lives');
@@ -598,6 +736,7 @@ def juego_buscaminas():
         lives = MAX_ERRORS;
         found = 0;
         done = false;
+        celebrated = false;
         livesEl.textContent = lives;
         msg.innerHTML = '';
         render();
@@ -624,6 +763,10 @@ def juego_buscaminas():
           if (found === GIFTS) {{
             done = true;
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+            if (!celebrated) {{
+              celebrated = true;
+              setTimeout(() => celebrate(), 250);
+            }}
           }}
         }} else {{
           el.classList.add('bad');
@@ -640,6 +783,10 @@ def juego_buscaminas():
             }});
             msg.innerHTML =
               '😅 Se acabaron los intentos. ¡Pero mira lo que había! 🎀 <strong>María</strong> 🎀';
+            if (!celebrated) {{
+              celebrated = true;
+              setTimeout(() => celebrate(), 250);
+            }}
           }}
         }}
       }}
@@ -649,7 +796,7 @@ def juego_buscaminas():
     </body>
     </html>
     """
-    components.html(mines_html, height=580)
+    components.html(mines_html, height=600)
 
 
 # ============================================================
