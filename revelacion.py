@@ -297,7 +297,7 @@ def juego_rasca():
 
 
 # ============================================================
-# 2. MEMORAMA
+# 2. MEMORAMA (aleatoriedad reforzada + íconos únicos)
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -368,22 +368,27 @@ def juego_memorama():
     {CELEBRATION_SCRIPT}
 
     <script>
+      // 15 íconos únicos, sin ambigüedad visual
       const ICONS = [
-        '💙','🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
-        '🦋','🌈','🍭','🩵','🎁'
+        '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
+        '🦋','🌈','🍭','🩵','🎁','🐣'
       ];
+
       let first = null, lock = false, matched = 0, celebrated = false;
+      let lastLayout = '';
 
       const grid = document.getElementById('grid');
       const msg = document.getElementById('msg');
       const pairsEl = document.getElementById('pairs');
 
+      // Aleatoriedad criptográfica
       function randInt(max) {{
         const buf = new Uint32Array(1);
         crypto.getRandomValues(buf);
         return buf[0] % max;
       }}
 
+      // Fisher-Yates con crypto
       function shuffle(arr) {{
         const a = arr.slice();
         for (let i = a.length - 1; i > 0; i--) {{
@@ -393,15 +398,38 @@ def juego_memorama():
         return a;
       }}
 
+      // Mezcla reforzada: baraja cartas + rota el orden base de íconos
+      // y fuerza un layout distinto al anterior
+      function generateLayout() {{
+        let attempt = 0;
+        let cards;
+        do {{
+          // Rotamos la lista base de íconos para que ni siquiera
+          // los "pares" tengan el mismo orden alfabético/visual
+          const rotated = shuffle(ICONS);
+          cards = shuffle([...rotated, ...rotated]);
+          const fingerprint = cards.join('');
+          if (fingerprint !== lastLayout) {{
+            lastLayout = fingerprint;
+            break;
+          }}
+          attempt++;
+        }} while (attempt < 5);
+        return cards;
+      }}
+
       function build() {{
         grid.innerHTML = '';
         msg.innerHTML = '';
         matched = 0; first = null; lock = false; celebrated = false;
         pairsEl.textContent = '0';
-        const cards = shuffle([...ICONS, ...ICONS]);
-        cards.forEach(icon => {{
+
+        const cards = generateLayout();
+        cards.forEach((icon, index) => {{
           const c = document.createElement('div');
           c.className = 'card';
+          c.dataset.icon = icon;
+          c.dataset.pos = index;
           c.innerHTML = `<div class="inner">
               <div class="face">?</div>
               <div class="back">${{icon}}</div>
@@ -416,9 +444,9 @@ def juego_memorama():
             card.classList.contains('matched')) return;
         card.classList.add('flipped');
         if (!first) {{ first = card; return; }}
-        if (first.querySelector('.back').textContent ===
-            card.querySelector('.back').textContent) {{
-          first.classList.add('matched'); card.classList.add('matched');
+        if (first.dataset.icon === card.dataset.icon) {{
+          first.classList.add('matched');
+          card.classList.add('matched');
           matched++; first = null;
           pairsEl.textContent = matched;
           if (matched === 15 && !celebrated) {{
@@ -955,7 +983,6 @@ def juego_triqui():
         if (move === null) {{
           const corners = [0,2,6,8].filter(i => board[i] === '');
           if (corners.length) {{
-            // 70% óptimo, 30% aleatorio para dar chance
             if (Math.random() < 0.7) {{
               move = corners[randInt(corners.length)];
             }}
@@ -1002,7 +1029,7 @@ def juego_triqui():
 
 
 # ============================================================
-# 7. ACRÓSTICO (M A R Í A)
+# 7. ACRÓSTICO
 # ============================================================
 def juego_acrostico():
     acrostico_html = f"""
@@ -1083,7 +1110,6 @@ def juego_acrostico():
     {CELEBRATION_SCRIPT}
 
     <script>
-      // Estructura: letra, pregunta y respuesta (sin tildes, en minúsculas, sin espacios)
       const DATA = [
         {{ letter: 'M', q: 'Fruto rojo pequeño y dulce, típico del verano.',
            a: 'mora',
