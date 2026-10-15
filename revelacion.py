@@ -33,7 +33,7 @@ st.markdown('<div class="subtitle">Elige un juego para descubrir la sorpresa</di
 
 
 # ============================================================
-# OPCIÓN 1: RASCA Y GANA
+# 1. RASCA Y GANA (más grande, mínimo 10 segundos)
 # ============================================================
 def juego_rasca():
     scratch_html = """
@@ -44,9 +44,9 @@ def juego_rasca():
       body { margin: 0; display: flex; flex-direction: column;
              align-items: center; font-family: sans-serif; background: #fff; }
       #wrap {
-        position: relative; width: 320px; height: 220px;
-        border-radius: 12px; overflow: hidden;
-        box-shadow: 0 4px 12px rgba(0,0,0,.15);
+        position: relative; width: 480px; height: 340px;
+        border-radius: 16px; overflow: hidden;
+        box-shadow: 0 6px 20px rgba(0,0,0,.18);
         touch-action: none;
       }
       #reveal {
@@ -54,85 +54,133 @@ def juego_rasca():
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         background: linear-gradient(135deg, #ffd1e3, #cfe4ff);
-        color: #c2185b;
-        text-align: center;
+        color: #c2185b; text-align: center;
       }
-      #reveal h1 { margin: 0; font-size: 40px; }
-      #reveal p  { margin: 6px 0 0; font-size: 22px; color: #2a4d8f; }
+      #reveal .emoji { font-size: 60px; }
+      #reveal h1 { margin: 4px 0; font-size: 46px; }
+      #reveal p  { margin: 0; font-size: 30px; color: #2a4d8f; font-weight: bold; }
       #cover {
         position: absolute; inset: 0;
-        background: #b0b0b0;
-        cursor: crosshair;
+        background: #b0b0b0; cursor: crosshair;
+      }
+      #hint {
+        position: absolute; top: 8px; left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0,0,0,.55); color: #fff;
+        padding: 4px 12px; border-radius: 12px;
+        font-size: 13px; pointer-events: none;
+      }
+      #resetBtn {
+        margin-top: 14px; padding: 8px 22px;
+        border: 1px solid #999; background: #fff;
+        border-radius: 6px; cursor: pointer; font-size: 14px;
       }
     </style>
     </head>
     <body>
       <div id="wrap">
         <div id="reveal">
-          <h1>🎀 ¡Es una niña! 🎀</h1>
+          <div class="emoji">🎀</div>
+          <h1>¡Es una niña!</h1>
           <p>María</p>
         </div>
-        <canvas id="cover" width="320" height="220"></canvas>
+        <canvas id="cover" width="480" height="340"></canvas>
+        <div id="hint">Rasca al menos 10 segundos 👆</div>
       </div>
+      <button id="resetBtn" onclick="reset()">🔄 Reiniciar</button>
 
     <script>
       const canvas = document.getElementById('cover');
       const ctx = canvas.getContext('2d');
+      const hint = document.getElementById('hint');
       let drawing = false;
+      let scratchingTime = 0;
+      let lastTick = 0;
+      const MIN_MS = 10000; // 10 s
 
       function paintCover() {
+        ctx.globalCompositeOperation = 'source-over';
         ctx.fillStyle = '#b0b0b0';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#888';
-        ctx.font = '16px sans-serif';
+        ctx.fillStyle = '#8a8a8a';
+        ctx.font = 'bold 20px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('Rasca aquí 👆', canvas.width/2, canvas.height/2);
+        ctx.fillText('Rasca aquí', canvas.width/2, canvas.height/2 - 10);
+        ctx.font = '14px sans-serif';
+        ctx.fillText('(mínimo 10 segundos)', canvas.width/2, canvas.height/2 + 16);
+        ctx.globalCompositeOperation = 'destination-out';
       }
+
+      function reset() {
+        scratchingTime = 0;
+        lastTick = 0;
+        canvas.style.display = 'block';
+        canvas.style.opacity = 1;
+        canvas.style.transition = 'none';
+        hint.textContent = 'Rasca al menos 10 segundos 👆';
+        paintCover();
+      }
+
       paintCover();
-      ctx.globalCompositeOperation = 'destination-out';
 
       function pos(e) {
         const r = canvas.getBoundingClientRect();
         const t = e.touches ? e.touches[0] : e;
-        return { x: t.clientX - r.left, y: t.clientY - r.top };
+        return {
+          x: (t.clientX - r.left) * (canvas.width / r.width),
+          y: (t.clientY - r.top) * (canvas.height / r.height)
+        };
       }
 
       function scratch(e) {
         if (!drawing) return;
+        const now = performance.now();
+        if (lastTick) scratchingTime += now - lastTick;
+        lastTick = now;
+
         const { x, y } = pos(e);
         ctx.beginPath();
-        ctx.arc(x, y, 22, 0, Math.PI * 2);
+        ctx.arc(x, y, 28, 0, Math.PI * 2);
         ctx.fill();
-        checkProgress();
-      }
 
-      function checkProgress() {
+        const remaining = Math.max(0, (MIN_MS - scratchingTime) / 1000).toFixed(1);
+        hint.textContent = `Rascando... faltan ${remaining}s`;
+
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         let clear = 0;
         for (let i = 3; i < data.length; i += 4) if (data[i] < 40) clear++;
-        if (clear / (canvas.width * canvas.height) > 0.55) {
-          canvas.style.transition = 'opacity .6s';
+        const pct = clear / (canvas.width * canvas.height);
+
+        if (pct > 0.55 && scratchingTime >= MIN_MS) {
+          canvas.style.transition = 'opacity .8s';
           canvas.style.opacity = 0;
-          setTimeout(() => canvas.style.display = 'none', 600);
+          hint.style.display = 'none';
+          setTimeout(() => canvas.style.display = 'none', 800);
+        } else if (pct > 0.55 && scratchingTime < MIN_MS) {
+          hint.textContent = `Sigue rascando... faltan ${remaining}s`;
         }
       }
 
-      canvas.addEventListener('mousedown', e => { drawing = true; scratch(e); });
+      canvas.addEventListener('mousedown', e => {
+        drawing = true; lastTick = performance.now(); scratch(e);
+      });
       canvas.addEventListener('mousemove', scratch);
-      window.addEventListener('mouseup', () => drawing = false);
+      window.addEventListener('mouseup', () => { drawing = false; lastTick = 0; });
 
-      canvas.addEventListener('touchstart', e => { e.preventDefault(); drawing = true; scratch(e); });
-      canvas.addEventListener('touchmove',  e => { e.preventDefault(); scratch(e); });
-      window.addEventListener('touchend', () => drawing = false);
+      canvas.addEventListener('touchstart', e => {
+        e.preventDefault(); drawing = true; lastTick = performance.now(); scratch(e);
+      });
+      canvas.addEventListener('touchmove', e => { e.preventDefault(); scratch(e); });
+      window.addEventListener('touchend', () => { drawing = false; lastTick = 0; });
     </script>
     </body>
     </html>
     """
-    components.html(scratch_html, height=300)
+    components.html(scratch_html, height=440, key="rasca")
 
 
 # ============================================================
-# OPCIÓN 2: MEMORAMA
+# 2. MEMORAMA (15 parejas = 30 cartas)
 # ============================================================
 def juego_memorama():
     memory_html = """
@@ -143,49 +191,75 @@ def juego_memorama():
       body { margin: 0; display: flex; flex-direction: column;
              align-items: center; font-family: sans-serif; background: #fff; }
       #grid {
-        display: grid; grid-template-columns: repeat(3, 90px);
-        gap: 10px; margin-top: 10px;
+        display: grid; grid-template-columns: repeat(6, 1fr);
+        gap: 8px; margin-top: 10px;
+        max-width: 640px;
       }
-      .card {
-        width: 90px; height: 90px; perspective: 600px; cursor: pointer;
-      }
+      .card { aspect-ratio: 1/1; perspective: 600px; cursor: pointer; }
       .inner {
         position: relative; width: 100%; height: 100%;
         transition: transform .4s; transform-style: preserve-3d;
       }
       .card.flipped .inner, .card.matched .inner { transform: rotateY(180deg); }
       .face, .back {
-        position: absolute; inset: 0; border-radius: 10px;
+        position: absolute; inset: 0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 34px; backface-visibility: hidden;
+        font-size: 28px; backface-visibility: hidden;
       }
-      .face { background: linear-gradient(135deg,#cfe4ff,#ffd1e3); color: #fff; }
-      .back { background: #9aa7b8; transform: rotateY(180deg); }
+      .face {
+        background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
+        color: #fff; font-size: 22px;
+      }
+      .back {
+        background: #fff; border: 2px solid #cfe4ff;
+        transform: rotateY(180deg);
+      }
+      .card.matched .back { border-color: #ffb3d1; background: #fff0f7; }
       #msg {
-        margin-top: 20px; font-size: 22px; color: #c2185b;
+        margin-top: 18px; font-size: 22px; color: #c2185b;
         min-height: 30px; text-align: center;
+      }
+      #info { margin-top: 8px; color: #666; font-size: 14px; }
+      button {
+        margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
       }
     </style>
     </head>
     <body>
+      <div id="info">Parejas encontradas: <span id="pairs">0</span> / 15</div>
       <div id="grid"></div>
       <div id="msg"></div>
+      <button onclick="reset()">🔄 Reiniciar</button>
 
     <script>
-      const icons = ['💙','🎀','💙','🎀','⭐','⭐'];
+      const ICONS = [
+        '💙','🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
+        '🦋','🌈','🍭','🩵','🎁'
+      ];
       let first = null, lock = false, matched = 0;
 
       const grid = document.getElementById('grid');
-      icons.sort(() => Math.random() - 0.5).forEach((icon) => {
-        const c = document.createElement('div');
-        c.className = 'card';
-        c.innerHTML = `<div class="inner">
-            <div class="face">?</div>
-            <div class="back">${icon}</div>
-          </div>`;
-        c.onclick = () => flip(c);
-        grid.appendChild(c);
-      });
+      const msg = document.getElementById('msg');
+      const pairsEl = document.getElementById('pairs');
+
+      function build() {
+        grid.innerHTML = '';
+        msg.innerHTML = '';
+        matched = 0; first = null; lock = false;
+        pairsEl.textContent = '0';
+        const cards = [...ICONS, ...ICONS].sort(() => Math.random() - 0.5);
+        cards.forEach(icon => {
+          const c = document.createElement('div');
+          c.className = 'card';
+          c.innerHTML = `<div class="inner">
+              <div class="face">?</div>
+              <div class="back">${icon}</div>
+            </div>`;
+          c.onclick = () => flip(c);
+          grid.appendChild(c);
+        });
+      }
 
       function flip(card) {
         if (lock || card.classList.contains('flipped') ||
@@ -196,9 +270,9 @@ def juego_memorama():
             card.querySelector('.back').textContent) {
           first.classList.add('matched'); card.classList.add('matched');
           matched++; first = null;
-          if (matched === 3) {
-            document.getElementById('msg').innerHTML =
-              '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          pairsEl.textContent = matched;
+          if (matched === 15) {
+            msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
           }
         } else {
           lock = true;
@@ -206,18 +280,21 @@ def juego_memorama():
             first.classList.remove('flipped');
             card.classList.remove('flipped');
             first = null; lock = false;
-          }, 800);
+          }, 700);
         }
       }
+
+      function reset() { build(); }
+      build();
     </script>
     </body>
     </html>
     """
-    components.html(memory_html, height=420)
+    components.html(memory_html, height=680, key="memory")
 
 
 # ============================================================
-# OPCIÓN 3: ROMPECABEZAS DESLIZANTE
+# 3. ROMPECABEZAS (números + colores, revela al resolver)
 # ============================================================
 def juego_rompecabezas():
     puzzle_html = """
@@ -231,51 +308,38 @@ def juego_rompecabezas():
         display: grid;
         grid-template-columns: repeat(3, 110px);
         grid-template-rows: repeat(3, 110px);
-        gap: 2px; background: #eee; padding: 4px;
-        border-radius: 8px; touch-action: none; user-select: none;
+        gap: 3px; background: #ddd; padding: 4px;
+        border-radius: 10px; touch-action: none; user-select: none;
       }
       .tile {
-        background-size: 330px 330px;
-        cursor: pointer; border-radius: 4px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 34px; font-weight: bold; color: #fff;
+        cursor: pointer; border-radius: 6px;
         transition: transform .15s;
       }
-      .tile:hover { transform: scale(0.97); }
-      .tile.empty { background: #fff; cursor: default; }
+      .tile:hover { transform: scale(0.96); }
+      .tile.empty { background: #f5f5f5 !important; cursor: default; }
       #msg {
-        margin-top: 18px; font-size: 22px; color: #c2185b;
-        min-height: 30px; text-align: center;
+        margin-top: 18px; font-size: 24px; color: #c2185b;
+        min-height: 40px; text-align: center; line-height: 1.3;
       }
       button {
-        margin-top: 10px; padding: 6px 16px; border: 1px solid #999;
-        background: #fff; cursor: pointer; border-radius: 6px;
+        margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
       }
     </style>
     </head>
     <body>
       <div id="board"></div>
       <div id="msg"></div>
-      <button onclick="shuffleBoard()">Mezclar</button>
+      <button onclick="shuffleBoard()">🔄 Reiniciar</button>
 
     <script>
       const SIZE = 3;
-      const svg = `
-        <svg xmlns='http://www.w3.org/2000/svg' width='330' height='330'>
-          <defs>
-            <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
-              <stop offset='0' stop-color='#cfe4ff'/>
-              <stop offset='1' stop-color='#ffd1e3'/>
-            </linearGradient>
-          </defs>
-          <rect width='330' height='330' fill='url(%23g)'/>
-          <text x='165' y='150' font-size='42' text-anchor='middle'
-                font-family='sans-serif' fill='#c2185b'>🎀</text>
-          <text x='165' y='200' font-size='30' text-anchor='middle'
-                font-family='sans-serif' fill='#2a4d8f'>¡Es niña!</text>
-          <text x='165' y='240' font-size='28' text-anchor='middle'
-                font-family='sans-serif' font-weight='bold'
-                fill='#c2185b'>María</text>
-        </svg>`;
-      const IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+      const COLORS = [
+        '#e63946','#f77f00','#fcbf49','#06a77d','#4c6ef5',
+        '#8338ec','#ff6b9d','#00b4d8'
+      ];
 
       let board = [];
       let solved = false;
@@ -295,7 +359,7 @@ def juego_rompecabezas():
           }
         } while (!isSolvable(board) || isSolved());
         solved = false;
-        document.getElementById('msg').textContent = '';
+        document.getElementById('msg').innerHTML = '';
         render();
       }
 
@@ -321,10 +385,8 @@ def juego_rompecabezas():
           const d = document.createElement('div');
           d.className = 'tile' + (val === 0 ? ' empty' : '');
           if (val !== 0) {
-            const row = Math.floor((val - 1) / SIZE);
-            const col = (val - 1) % SIZE;
-            d.style.backgroundImage = `url("${IMG}")`;
-            d.style.backgroundPosition = `-${col * 110}px -${row * 110}px`;
+            d.textContent = val;
+            d.style.background = COLORS[(val - 1) % COLORS.length];
           }
           d.onclick = () => onClick(idx);
           b.appendChild(d);
@@ -353,28 +415,258 @@ def juego_rompecabezas():
     </body>
     </html>
     """
-    components.html(puzzle_html, height=520)
+    components.html(puzzle_html, height=560, key="puzzle")
+
+
+# ============================================================
+# 4. GLOBO SORPRESA (clic muchas veces para inflar y explotar)
+# ============================================================
+def juego_globo():
+    balloon_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      body { margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff;
+             padding: 10px; }
+      #stage {
+        position: relative; width: 100%; max-width: 480px; height: 360px;
+        display: flex; align-items: center; justify-content: center;
+        touch-action: manipulation;
+      }
+      #balloon {
+        width: 90px; height: 110px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+        background: radial-gradient(circle at 30% 30%, #ff8fb1, #c2185b);
+        cursor: pointer; transition: all .15s ease-out;
+        position: relative;
+      }
+      #balloon::after {
+        content: ''; position: absolute; bottom: -14px; left: 50%;
+        transform: translateX(-50%);
+        width: 2px; height: 16px; background: #888;
+      }
+      #hint { color: #666; font-size: 14px; margin-top: 10px; }
+      #msg {
+        margin-top: 14px; font-size: 24px; color: #c2185b;
+        min-height: 40px; text-align: center; line-height: 1.3;
+      }
+      button {
+        margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+      }
+      @keyframes pop {
+        0% { transform: scale(1); opacity: 1; }
+        100% { transform: scale(2.2); opacity: 0; }
+      }
+      .pop { animation: pop .4s ease-out forwards; }
+    </style>
+    </head>
+    <body>
+      <div id="stage">
+        <div id="balloon"></div>
+      </div>
+      <div id="hint">Haz clic/toque el globo para inflarlo (necesitas ~20 toques)</div>
+      <div id="msg"></div>
+      <button onclick="reset()">🔄 Reiniciar</button>
+
+    <script>
+      const balloon = document.getElementById('balloon');
+      const hint = document.getElementById('hint');
+      const msg = document.getElementById('msg');
+      const NEED = 20;
+      let count = 0;
+      let done = false;
+
+      function update() {
+        const scale = 1 + count / NEED * 1.2;
+        balloon.style.transform = `scale(${scale})`;
+        hint.textContent = `Toques: ${count} / ${NEED}`;
+      }
+
+      balloon.addEventListener('click', () => {
+        if (done) return;
+        count++;
+        update();
+        if (count >= NEED) {
+          done = true;
+          balloon.classList.add('pop');
+          msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          hint.textContent = '¡El globo explotó! 🎉';
+        }
+      });
+
+      function reset() {
+        count = 0; done = false;
+        balloon.classList.remove('pop');
+        balloon.style.transform = 'scale(1)';
+        msg.innerHTML = '';
+        hint.textContent = 'Haz clic/toque el globo para inflarlo (necesitas ~20 toques)';
+      }
+
+      update();
+    </script>
+    </body>
+    </html>
+    """
+    components.html(balloon_html, height=560, key="balloon")
+
+
+# ============================================================
+# 5. BUSCAMINAS SUAVE (destapa celdas, encuentra la sorpresa)
+# ============================================================
+def juego_buscaminas():
+    mines_html = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      body { margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff; }
+      #grid {
+        display: grid; grid-template-columns: repeat(6, 60px);
+        gap: 4px; margin-top: 10px;
+      }
+      .cell {
+        width: 60px; height: 60px;
+        background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
+        border-radius: 6px; cursor: pointer;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 24px; transition: transform .1s;
+        user-select: none;
+      }
+      .cell:active { transform: scale(0.94); }
+      .cell.safe { background: #f5f5f5; cursor: default; }
+      .cell.safe.bad { background: #ffe1e1; }
+      .cell.safe.good { background: #e2ffe9; }
+      #info { color: #666; font-size: 14px; margin-top: 8px; }
+      #msg {
+        margin-top: 14px; font-size: 24px; color: #c2185b;
+        min-height: 40px; text-align: center; line-height: 1.3;
+      }
+      button {
+        margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+      }
+    </style>
+    </head>
+    <body>
+      <div id="info">Encuentra las 3 celdas con 👶 · Fallos restantes: <span id="lives">3</span></div>
+      <div id="grid"></div>
+      <div id="msg"></div>
+      <button onclick="reset()">🔄 Reiniciar</button>
+
+    <script>
+      const COLS = 6, ROWS = 5;
+      const TOTAL = COLS * ROWS;
+      const GIFTS = 3;       // celdas que revelan el mensaje
+      const MAX_ERRORS = 3;  // fallos permitidos
+      let grid, lives, found, done;
+
+      const gridEl = document.getElementById('grid');
+      const livesEl = document.getElementById('lives');
+      const msg = document.getElementById('msg');
+
+      function reset() {
+        grid = Array(TOTAL).fill(false);
+        // coloca 3 regalos al azar
+        let placed = 0;
+        while (placed < GIFTS) {
+          const i = Math.floor(Math.random() * TOTAL);
+          if (!grid[i]) { grid[i] = true; placed++; }
+        }
+        lives = MAX_ERRORS;
+        found = 0;
+        done = false;
+        livesEl.textContent = lives;
+        msg.innerHTML = '';
+        render();
+      }
+
+      function render() {
+        gridEl.innerHTML = '';
+        for (let i = 0; i < TOTAL; i++) {
+          const c = document.createElement('div');
+          c.className = 'cell';
+          c.dataset.idx = i;
+          c.onclick = () => reveal(i, c);
+          gridEl.appendChild(c);
+        }
+      }
+
+      function reveal(i, el) {
+        if (done || el.classList.contains('safe')) return;
+        el.classList.add('safe');
+        if (grid[i]) {
+          el.classList.add('good');
+          el.textContent = '👶';
+          found++;
+          if (found === GIFTS) {
+            done = true;
+            msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          }
+        } else {
+          el.classList.add('bad');
+          el.textContent = '✖';
+          lives--;
+          livesEl.textContent = lives;
+          if (lives <= 0) {
+            done = true;
+            // revela todos los regalos
+            [...gridEl.children].forEach((child, idx) => {
+              if (grid[idx]) {
+                child.classList.add('safe', 'good');
+                child.textContent = '👶';
+              }
+            });
+            msg.innerHTML = '😅 Se acabaron los intentos. ¡Pero mira lo que había! 🎀 <strong>María</strong> 🎀';
+          }
+        }
+      }
+
+      reset();
+    </script>
+    </body>
+    </html>
+    """
+    components.html(mines_html, height=580, key="mines")
 
 
 # ============================================================
 # PESTAÑAS
 # ============================================================
-tab1, tab2, tab3 = st.tabs(["🎨 Rasca y Gana", "🃏 Memorama", "🧩 Rompecabezas"])
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🎨 Rasca y Gana",
+    "🃏 Memorama",
+    "🧩 Rompecabezas",
+    "🎈 Globo Sorpresa",
+    "👶 Busca el Bebé"
+])
 
 with tab1:
     st.subheader("Rasca para descubrir")
-    st.caption("Pasa el mouse (o el dedo) sobre el recuadro gris 👇")
+    st.caption("Rasca el recuadro al menos **10 segundos** y cubre el 55% para revelar 👇")
     juego_rasca()
 
 with tab2:
-    st.subheader("Encuentra las parejas")
-    st.caption("Voltea las cartas y encuentra los 3 pares 👇")
+    st.subheader("Encuentra las 15 parejas")
+    st.caption("Voltea las cartas y encuentra los 15 pares 👇")
     juego_memorama()
 
 with tab3:
     st.subheader("Ordena el rompecabezas")
-    st.caption("Haz click en las piezas junto al espacio vacío para moverlas 👇")
+    st.caption("Haz click en las piezas junto al espacio vacío. Ordena del 1 al 8 👇")
     juego_rompecabezas()
+
+with tab4:
+    st.subheader("Infla el globo")
+    st.caption("Haz click/toque el globo unas 20 veces para que explote 👇")
+    juego_globo()
+
+with tab5:
+    st.subheader("Encuentra a los bebés")
+    st.caption("Destapa celdas y encuentra 3 👶 antes de agotar los 3 intentos fallidos 👇")
+    juego_buscaminas()
 
 st.markdown("---")
 st.caption("💙 Hecho con amor para la llegada de María 🎀")
