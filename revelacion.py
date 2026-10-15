@@ -321,7 +321,6 @@ def juego_memorama():
       }}
       #grid {{
         display: grid;
-        /* 6 columnas × 5 filas, cada celda se adapta al ancho del viewport */
         grid-template-columns: repeat(6, min(62px, 14vw));
         grid-template-rows: repeat(5, min(62px, 14vw));
         gap: min(8px, 1.6vw);
@@ -383,7 +382,6 @@ def juego_memorama():
     {CELEBRATION_SCRIPT}
 
     <script>
-      // 15 íconos únicos y visualmente distintos
       const ICONS = [
         '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
         '🦋','🌈','🍭','🩵','🎁','🐣'
@@ -717,205 +715,148 @@ def juego_globo():
 
 
 # ============================================================
-# 5. BUSCA EL BEBÉ
+# 5. TRIQUI DE BOMBAS (nuevo)
 # ============================================================
-def juego_buscaminas():
-    mines_html = f"""
+def juego_triqui_bombas():
+    bombitas_html = f"""
     <!-- seed:{SEED} -->
     <!DOCTYPE html>
     <html>
     <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
-      body {{ margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff; }}
-      #grid {{
-        display: grid; grid-template-columns: repeat(6, 60px);
-        gap: 4px; margin-top: 10px;
+      html, body {{
+        margin: 0; padding: 0;
+        font-family: sans-serif; background: #fff;
+        width: 100%; overflow-x: hidden;
       }}
-      .cell {{
-        width: 60px; height: 60px;
-        background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
-        border-radius: 6px; cursor: pointer;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 24px; transition: transform .1s;
-        user-select: none;
+      body {{
+        display: flex; flex-direction: column; align-items: center;
+        padding: 10px 4px; box-sizing: border-box;
       }}
-      .cell:active {{ transform: scale(0.94); }}
-      .cell.safe {{ background: #f5f5f5; cursor: default; }}
-      .cell.safe.bad {{ background: #ffe1e1; }}
-      .cell.safe.good {{ background: #e2ffe9; }}
-      #info {{ color: #666; font-size: 14px; margin-top: 8px; }}
-      #msg {{
-        margin-top: 14px; font-size: 24px; color: #c2185b;
-        min-height: 40px; text-align: center; line-height: 1.3;
+      #title {{
+        color: #c2185b;
         font-weight: bold;
+        font-size: min(18px, 4.5vw);
+        margin-bottom: 8px;
+        text-align: center;
       }}
-      #msg.error {{ color: #d32f2f; }}
-      #msg.win   {{ color: #c2185b; }}
-      button {{
-        margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
-        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
-      }}
-    </style>
-    </head>
-    <body>
-      <div id="info">
-        Encuentra las 3 celdas con 👶 · Fallos restantes:
-        <span id="lives">10</span>
-      </div>
-      <div id="grid"></div>
-      <div id="msg"></div>
-      <button onclick="reset()">🔄 Reiniciar</button>
-
-    {CELEBRATION_SCRIPT}
-
-    <script>
-      const COLS = 6, ROWS = 5;
-      const TOTAL = COLS * ROWS;
-      const GIFTS = 3;
-      const MAX_ERRORS = 10;
-      let grid, lives, found, done, celebrated;
-
-      const gridEl = document.getElementById('grid');
-      const livesEl = document.getElementById('lives');
-      const msg = document.getElementById('msg');
-
-      function randInt(max) {{
-        const buf = new Uint32Array(1);
-        crypto.getRandomValues(buf);
-        return buf[0] % max;
-      }}
-
-      function reset() {{
-        grid = Array(TOTAL).fill(false);
-        let placed = 0;
-        while (placed < GIFTS) {{
-          const i = randInt(TOTAL);
-          if (!grid[i]) {{ grid[i] = true; placed++; }}
-        }}
-        lives = MAX_ERRORS;
-        found = 0;
-        done = false;
-        celebrated = false;
-        livesEl.textContent = lives;
-        msg.innerHTML = '';
-        msg.className = '';
-        render();
-      }}
-
-      function render() {{
-        gridEl.innerHTML = '';
-        for (let i = 0; i < TOTAL; i++) {{
-          const c = document.createElement('div');
-          c.className = 'cell';
-          c.dataset.idx = i;
-          c.onclick = () => reveal(i, c);
-          gridEl.appendChild(c);
-        }}
-      }}
-
-      function reveal(i, el) {{
-        if (done || el.classList.contains('safe')) return;
-        el.classList.add('safe');
-
-        if (grid[i]) {{
-          el.classList.add('good');
-          el.textContent = '👶';
-          found++;
-
-          if (found === GIFTS) {{
-            done = true;
-            msg.className = 'win';
-            msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
-            if (!celebrated) {{
-              celebrated = true;
-              setTimeout(() => celebrate(), 250);
-            }}
-          }}
-        }} else {{
-          el.classList.add('bad');
-          el.textContent = '✖';
-          lives--;
-          livesEl.textContent = lives;
-
-          if (lives <= 0) {{
-            done = true;
-            msg.className = 'error';
-            msg.innerHTML = '❌ ¡Se acabaron los intentos!<br>Vuelve a empezar...';
-            setTimeout(() => reset(), 2000);
-          }}
-        }}
-      }}
-
-      reset();
-    </script>
-    </body>
-    </html>
-    """
-    components.html(mines_html, height=600)
-
-
-# ============================================================
-# 6. TRIQUI
-# ============================================================
-def juego_triqui():
-    triqui_html = f"""
-    <!-- seed:{SEED} -->
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-      body {{ margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff;
-             padding: 10px; }}
       #board {{
         display: grid;
-        grid-template-columns: repeat(3, 100px);
-        grid-template-rows: repeat(3, 100px);
-        gap: 6px; background: #cfe4ff; padding: 6px;
-        border-radius: 12px;
+        grid-template-columns: repeat(3, min(110px, 26vw));
+        grid-template-rows: repeat(3, min(110px, 26vw));
+        gap: min(10px, 2.5vw);
+        background: #f0f4ff;
+        padding: min(10px, 2.5vw);
+        border-radius: 16px;
+        touch-action: manipulation;
       }}
-      .cell {{
-        width: 100px; height: 100px;
-        background: #fff; border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: 52px; font-weight: bold;
-        cursor: pointer; user-select: none;
-        transition: transform .12s;
+      .bomb {{
+        width: 100%;
+        height: 100%;
+        border-radius: 50% 50% 50% 50% / 55% 55% 45% 45%;
+        background: radial-gradient(circle at 32% 28%, #ffffff, #ececec 70%, #d8d8d8);
+        box-shadow: inset -4px -6px 10px rgba(0,0,0,.08),
+                    0 3px 8px rgba(0,0,0,.12);
+        cursor: pointer;
+        position: relative;
+        transition: transform .15s ease, box-shadow .25s ease, background .35s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: min(38px, 9vw);
+        user-select: none;
       }}
-      .cell:hover {{ transform: scale(1.04); }}
-      .cell.x {{ color: #2a4d8f; }}
-      .cell.o {{ color: #c2185b; }}
-      .cell.win {{ background: #ffeaa7; }}
+      .bomb::after {{
+        content: '';
+        position: absolute;
+        bottom: -12%;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 12%;
+        height: 18%;
+        background: #bbb;
+        clip-path: polygon(50% 0, 100% 100%, 0 100%);
+      }}
+      .bomb:hover:not(.pink):not(.blue) {{
+        transform: scale(1.05);
+      }}
+      .bomb:active:not(.pink):not(.blue) {{
+        transform: scale(0.95);
+      }}
+      .bomb.pink {{
+        background: radial-gradient(circle at 32% 28%, #ffd1e3, #ff6b9d 65%, #c2185b);
+        box-shadow: inset -4px -6px 12px rgba(0,0,0,.15),
+                    0 0 20px rgba(255,107,157,.55);
+        cursor: default;
+      }}
+      .bomb.blue {{
+        background: radial-gradient(circle at 32% 28%, #cfe4ff, #4c6ef5 65%, #2a4d8f);
+        box-shadow: inset -4px -6px 12px rgba(0,0,0,.15),
+                    0 0 20px rgba(76,110,245,.5);
+        cursor: default;
+      }}
+      .bomb.pink::after,
+      .bomb.blue::after {{
+        background: #888;
+      }}
+      .bomb.win {{
+        animation: pop 0.6s ease-out;
+      }}
+      @keyframes pop {{
+        0%   {{ transform: scale(1); }}
+        50%  {{ transform: scale(1.18); }}
+        100% {{ transform: scale(1); }}
+      }}
       #msg {{
-        margin-top: 14px; font-size: 22px; color: #2a4d8f;
-        min-height: 34px; text-align: center; font-weight: bold;
+        margin-top: 16px; font-size: min(22px, 5vw); font-weight: bold;
+        min-height: 40px; text-align: center; line-height: 1.3;
+        color: #2a4d8f; max-width: 480px;
       }}
+      #msg.win   {{ color: #c2185b; }}
       #msg.error {{ color: #d32f2f; }}
       #msg.draw  {{ color: #e67e22; }}
-      #msg.win   {{ color: #c2185b; }}
+      #info {{
+        margin-top: 6px;
+        color: #666;
+        font-size: min(13px, 3.5vw);
+        text-align: center;
+      }}
       button {{
-        margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
-        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+        margin-top: 12px; padding: 8px 22px;
+        border: 1px solid #999; background: #fff;
+        border-radius: 6px; cursor: pointer;
+        font-size: min(14px, 3.6vw);
       }}
     </style>
     </head>
     <body>
-      <div id="board"></div>
-      <div id="msg"></div>
+      <div id="title">💗 Tú juegas con bombas rosas · La CPU con azules 💙</div>
+      <div id="info">
+        Hay <b>5 rosas</b> y <b>4 azules</b>. Presiona las blancas para descubrirlas.
+      </div>
+      <div id="board" style="margin-top:12px;"></div>
+      <div id="msg">Tu turno — presiona una bomba blanca ⚪</div>
       <button onclick="reset()">🔄 Reiniciar</button>
 
     {CELEBRATION_SCRIPT}
 
     <script>
-      const USER = 'X';
-      const CPU  = 'O';
+      const TOTAL = 9;
+      const PINK_COUNT = 5;
+      const BLUE_COUNT = 4;
+
       const WINS = [
         [0,1,2],[3,4,5],[6,7,8],
         [0,3,6],[1,4,7],[2,5,8],
         [0,4,8],[2,4,6]
       ];
-      let board, done, celebrated;
+
+      let colors = [];      // 'pink' | 'blue' | null (oculto)
+      let revealed = [];    // true/false
+      let done = false;
+      let celebrated = false;
+      let userTurn = true;
 
       const boardEl = document.getElementById('board');
       const msg = document.getElementById('msg');
@@ -926,33 +867,53 @@ def juego_triqui():
         return buf[0] % max;
       }}
 
+      // Mezcla las posiciones de 5 rosas y 4 azules
+      function shuffleColors() {{
+        const arr = Array(PINK_COUNT).fill('pink')
+          .concat(Array(BLUE_COUNT).fill('blue'));
+        for (let i = arr.length - 1; i > 0; i--) {{
+          const j = randInt(i + 1);
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }}
+        return arr;
+      }}
+
       function reset() {{
-        board = Array(9).fill('');
+        colors = shuffleColors();
+        revealed = Array(TOTAL).fill(false);
         done = false;
         celebrated = false;
+        userTurn = true;
         msg.className = '';
-        msg.innerHTML = 'Tu turno — juegas con ❌';
+        msg.innerHTML = 'Tu turno — presiona una bomba blanca ⚪';
         render();
       }}
 
       function render() {{
         boardEl.innerHTML = '';
-        board.forEach((v, i) => {{
-          const c = document.createElement('div');
-          c.className = 'cell' + (v ? ' ' + v.toLowerCase() : '');
-          c.textContent = v;
-          c.onclick = () => play(i);
-          boardEl.appendChild(c);
-        }});
+        for (let i = 0; i < TOTAL; i++) {{
+          const b = document.createElement('div');
+          b.className = 'bomb';
+          if (revealed[i]) {{
+            b.classList.add(colors[i]);
+            b.textContent = colors[i] === 'pink' ? '💗' : '💙';
+          }}
+          b.onclick = () => userReveal(i);
+          boardEl.appendChild(b);
+        }}
       }}
 
-      function winner(b) {{
+      // Devuelve el ganador ('pink' | 'blue' | 'draw' | null)
+      function checkWinner(revealedColors) {{
         for (const line of WINS) {{
-          const [a, c, d] = line;
-          if (b[a] && b[a] === b[c] && b[a] === b[d])
-            return {{ player: b[a], line: line }};
+          const [a,b,c] = line;
+          if (revealed[a] && revealed[b] && revealed[c] &&
+              revealedColors[a] === revealedColors[b] &&
+              revealedColors[a] === revealedColors[c]) {{
+            return {{ player: revealedColors[a], line }};
+          }}
         }}
-        if (b.every(x => x)) return {{ player: 'draw', line: [] }};
+        if (revealed.every(x => x)) return {{ player: 'draw', line: [] }};
         return null;
       }}
 
@@ -962,61 +923,98 @@ def juego_triqui():
         }});
       }}
 
-      function play(i) {{
-        if (done || board[i]) return;
-        board[i] = USER;
-        render();
-        let w = winner(board);
-        if (w) return finish(w);
-        msg.innerHTML = 'Turno de la CPU...';
-        setTimeout(cpuMove, 350);
+      // Cuenta cuántas rosas/azules ya se revelaron
+      function revealedColorsArray() {{
+        return revealed.map((r, i) => r ? colors[i] : null);
       }}
 
-      function bestMove(player) {{
+      // El usuario revela una bomba (blanca → rosa o azul según su color real)
+      function userReveal(i) {{
+        if (done || revealed[i]) return;
+        revealed[i] = true;
+        render();
+
+        const state = revealedColorsArray();
+        let w = checkWinner(state);
+        if (w) return finish(w);
+
+        msg.innerHTML = 'Turno de la CPU... 💙';
+        userTurn = false;
+        setTimeout(cpuTurn, 500);
+      }}
+
+      // La CPU revela una bomba blanca
+      function cpuTurn() {{
+        if (done) return;
+
+        // Estrategia: si puede ganar revelando una azul → la hace
+        // Si no, revela cualquier bomba blanca disponible
+        const hidden = [];
+        for (let i = 0; i < TOTAL; i++) if (!revealed[i]) hidden.push(i);
+
+        let choice = null;
+
+        // Buscar jugada ganadora para 'blue'
         for (const line of WINS) {{
-          const vals = line.map(i => board[i]);
-          const countP = vals.filter(v => v === player).length;
-          const countEmpty = vals.filter(v => v === '').length;
-          if (countP === 2 && countEmpty === 1) {{
-            return line[vals.indexOf('')];
+          const [a,b,c] = line;
+          const vals = [a,b,c].map(idx => revealed[idx] ? colors[idx] : null);
+          const blues = vals.filter(v => v === 'blue').length;
+          const nulls = vals.filter(v => v === null).length;
+          if (blues === 2 && nulls === 1) {{
+            const idx = [a,b,c][vals.indexOf(null)];
+            if (colors[idx] === 'blue') {{ choice = idx; break; }}
           }}
         }}
-        return null;
-      }}
 
-      function cpuMove() {{
-        if (done) return;
-        let move = bestMove(CPU);
-        if (move === null) move = bestMove(USER);
-        if (move === null && board[4] === '') move = 4;
-        if (move === null) {{
-          const corners = [0,2,6,8].filter(i => board[i] === '');
-          if (corners.length) {{
-            if (Math.random() < 0.7) {{
-              move = corners[randInt(corners.length)];
+        // Bloquear al usuario: si el usuario tiene 2 rosas en línea
+        if (choice === null) {{
+          for (const line of WINS) {{
+            const [a,b,c] = line;
+            const vals = [a,b,c].map(idx => revealed[idx] ? colors[idx] : null);
+            const pinks = vals.filter(v => v === 'pink').length;
+            const nulls = vals.filter(v => v === null).length;
+            if (pinks === 2 && nulls === 1) {{
+              const idx = [a,b,c][vals.indexOf(null)];
+              if (colors[idx] === 'blue') {{ choice = idx; break; }}
             }}
           }}
         }}
-        if (move === null) {{
-          const libres = board.map((v,i) => v === '' ? i : -1).filter(i => i >= 0);
-          move = libres[randInt(libres.length)];
+
+        // Centro
+        if (choice === null && !revealed[4]) choice = 4;
+
+        // Esquina aleatoria
+        if (choice === null) {{
+          const corners = [0,2,6,8].filter(i => !revealed[i]);
+          if (corners.length) choice = corners[randInt(corners.length)];
         }}
-        board[move] = CPU;
-        render();
-        let w = winner(board);
-        if (w) return finish(w);
-        msg.innerHTML = 'Tu turno — juegas con ❌';
+
+        // Cualquier bomba oculta
+        if (choice === null && hidden.length) {{
+          choice = hidden[randInt(hidden.length)];
+        }}
+
+        if (choice !== null) {{
+          revealed[choice] = true;
+          render();
+          const state = revealedColorsArray();
+          let w = checkWinner(state);
+          if (w) return finish(w);
+        }}
+
+        userTurn = true;
+        msg.innerHTML = 'Tu turno — presiona una bomba blanca ⚪';
       }}
 
       function finish(w) {{
         done = true;
         if (w.player === 'draw') {{
           msg.className = 'draw';
-          msg.innerHTML = '😅 Empate... intenta de nuevo';
+          msg.innerHTML = '😅 Empate... pulsa Reiniciar para intentar de nuevo';
           return;
         }}
         highlight(w.line);
-        if (w.player === USER) {{
+        if (w.player === 'pink') {{
           msg.className = 'win';
           msg.innerHTML = '🎉 ¡Ganaste! 🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
           if (!celebrated) {{
@@ -1025,7 +1023,7 @@ def juego_triqui():
           }}
         }} else {{
           msg.className = 'error';
-          msg.innerHTML = '❌ Perdiste... inténtalo otra vez';
+          msg.innerHTML = '❌ La CPU ganó con azules... intenta otra vez';
         }}
       }}
 
@@ -1034,186 +1032,18 @@ def juego_triqui():
     </body>
     </html>
     """
-    components.html(triqui_html, height=600)
-
-
-# ============================================================
-# 7. ACRÓSTICO
-# ============================================================
-def juego_acrostico():
-    acrostico_html = f"""
-    <!-- seed:{SEED} -->
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-      body {{ margin: 0; display: flex; flex-direction: column;
-             align-items: center; font-family: sans-serif; background: #fff;
-             padding: 16px; }}
-      #intro {{
-        max-width: 560px; text-align: center;
-        color: #555; font-size: 15px; margin-bottom: 12px;
-      }}
-      #acrostic {{
-        display: flex; flex-direction: column; gap: 12px;
-        width: 100%; max-width: 560px;
-      }}
-      .row {{
-        display: flex; align-items: flex-start; gap: 12px;
-        background: #f9fafc; padding: 10px 14px;
-        border-radius: 10px; border-left: 4px solid #cfe4ff;
-      }}
-      .letter {{
-        font-size: 36px; font-weight: 900;
-        width: 44px; text-align: center;
-        background: linear-gradient(90deg,#c2185b,#2a4d8f);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        flex-shrink: 0;
-      }}
-      .content {{ flex: 1; }}
-      .question {{
-        font-size: 15px; color: #333; margin-bottom: 6px;
-      }}
-      .answer-row {{
-        display: flex; gap: 8px; align-items: center;
-      }}
-      input {{
-        flex: 1; padding: 8px 12px; font-size: 15px;
-        border: 1px solid #cfe4ff; border-radius: 6px;
-        outline: none; transition: border .2s;
-      }}
-      input:focus {{ border-color: #c2185b; }}
-      input.ok {{ border-color: #06a77d; background: #f0fff8; }}
-      input.bad {{ border-color: #d32f2f; background: #fff5f5; }}
-      .status {{
-        font-size: 18px; width: 22px; text-align: center;
-      }}
-      #msg {{
-        margin-top: 18px; font-size: 22px; color: #c2185b;
-        min-height: 34px; text-align: center; font-weight: bold;
-      }}
-      #msg.error {{ color: #d32f2f; }}
-      button {{
-        margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
-        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
-      }}
-      #check {{
-        background: #c2185b; color: #fff; border-color: #c2185b;
-        font-weight: bold;
-      }}
-    </style>
-    </head>
-    <body>
-      <div id="intro">
-        Resuelve el siguiente acróstico. Cada respuesta empieza con la
-        letra de la columna izquierda. ¡Si aciertas todas, verás el nombre!
-      </div>
-      <div id="acrostic"></div>
-      <div style="display:flex; gap:10px; margin-top:14px;">
-        <button id="check" onclick="checkAll()">✅ Comprobar</button>
-        <button onclick="reset()">🔄 Reiniciar</button>
-      </div>
-      <div id="msg"></div>
-
-    {CELEBRATION_SCRIPT}
-
-    <script>
-      const DATA = [
-        {{ letter: 'M', q: 'Fruto rojo pequeño y dulce, típico del verano.',
-           a: 'mora',
-           hint: 'Empieza con M, tiene 4 letras' }},
-        {{ letter: 'A', q: 'Ave rapaz que vuela alto y caza.',
-           a: 'aguila',
-           hint: 'Empieza con A, 6 letras' }},
-        {{ letter: 'R', q: 'Animal pequeño con orejas largas y salta.',
-           a: 'rana',
-           hint: 'Empieza con R, 4 letras' }},
-        {{ letter: 'I', q: 'Isla pequeña en medio del mar.',
-           a: 'isla',
-           hint: 'Empieza con I, 4 letras' }},
-        {{ letter: 'A', q: 'Ave nocturna que gira la cabeza 180°.',
-           a: 'ave',
-           hint: 'Empieza con A, 3 letras' }}
-      ];
-
-      const container = document.getElementById('acrostic');
-      const msg = document.getElementById('msg');
-      let solved = false;
-
-      function normalize(s) {{
-        return s.trim().toLowerCase()
-          .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
-      }}
-
-      function build() {{
-        container.innerHTML = '';
-        msg.innerHTML = '';
-        msg.className = '';
-        solved = false;
-        DATA.forEach((item, i) => {{
-          const row = document.createElement('div');
-          row.className = 'row';
-          row.innerHTML = `
-            <div class="letter">${{item.letter}}</div>
-            <div class="content">
-              <div class="question">${{item.q}}<br>
-                <small style="color:#888">${{item.hint}}</small>
-              </div>
-              <div class="answer-row">
-                <input type="text" id="in${{i}}" placeholder="Tu respuesta..."
-                       autocomplete="off" />
-                <div class="status" id="st${{i}}"></div>
-              </div>
-            </div>`;
-          container.appendChild(row);
-        }});
-      }}
-
-      function checkAll() {{
-        if (solved) return;
-        let allOk = true;
-        DATA.forEach((item, i) => {{
-          const input = document.getElementById('in' + i);
-          const status = document.getElementById('st' + i);
-          const val = normalize(input.value);
-          const ok = val === item.a;
-          input.classList.remove('ok', 'bad');
-          input.classList.add(ok ? 'ok' : 'bad');
-          status.textContent = ok ? '✅' : '❌';
-          if (!ok) allOk = false;
-        }});
-        if (allOk) {{
-          solved = true;
-          msg.className = '';
-          msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
-          setTimeout(() => celebrate(), 250);
-        }} else {{
-          msg.className = 'error';
-          msg.innerHTML = '❌ Algunas respuestas no son correctas. ¡Inténtalo otra vez!';
-        }}
-      }}
-
-      function reset() {{ build(); }}
-      build();
-    </script>
-    </body>
-    </html>
-    """
-    components.html(acrostico_html, height=680)
+    components.html(bombitas_html, height=620)
 
 
 # ============================================================
 # PESTAÑAS
 # ============================================================
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "🎨 Rasca y Gana",
     "🃏 Memorama",
     "🧩 Rompecabezas",
     "🎈 Globo Sorpresa",
-    "👶 Busca el Bebé",
-    "⭕ Triqui",
-    "🔤 Acróstico"
+    "💗 Triqui de Bombas"
 ])
 
 with tab1:
@@ -1237,19 +1067,9 @@ with tab4:
     juego_globo()
 
 with tab5:
-    st.subheader("Encuentra a los bebés")
-    st.caption("Encuentra 3 👶 antes de agotar los 10 fallos. Si pierdes, se reinicia 👇")
-    juego_buscaminas()
-
-with tab6:
-    st.subheader("Juega Triqui (Tres en línea)")
-    st.caption("Tú juegas con ❌. Debes **ganar** para ver la revelación. Si pierdes o empatas, se reinicia 👇")
-    juego_triqui()
-
-with tab7:
-    st.subheader("Resuelve el acróstico")
-    st.caption("Contesta las 5 preguntas. Las iniciales forman un nombre secreto 👇")
-    juego_acrostico()
+    st.subheader("Triqui de Bombas")
+    st.caption("Presiona bombas blancas ⚪ para revelarlas como 💗 (tú) o 💙 (CPU). **Gana con 3 rosas en línea** 👇")
+    juego_triqui_bombas()
 
 st.markdown("---")
 st.caption("💙 Hecho con amor para la llegada de María 🎀")
