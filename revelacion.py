@@ -45,14 +45,9 @@ SEED = st.session_state.reset_seed
 # ============================================================
 # BLOQUE DE ANIMACIÓN DE REVELACIÓN (compartido)
 # ============================================================
-# Este script se inyecta en cada juego. Expone `window.celebrate()`.
 CELEBRATION_SCRIPT = """
 <script>
-  function celebrate(containerId) {
-    const container = containerId
-      ? document.getElementById(containerId)
-      : document.body;
-
+  function celebrate() {
     // --- Overlay flash ---
     const overlay = document.createElement('div');
     overlay.style.cssText = `
@@ -65,7 +60,7 @@ CELEBRATION_SCRIPT = """
     document.body.appendChild(overlay);
     setTimeout(() => overlay.remove(), 1200);
 
-    // --- Partículas (confeti, corazones, estrellas) ---
+    // --- Partículas ---
     const EMOJIS = ['🎉','🎀','💙','💗','⭐','✨','🌸','👶','🎈','💖'];
     const N = 70;
     for (let i = 0; i < N; i++) {
@@ -92,7 +87,7 @@ CELEBRATION_SCRIPT = """
       setTimeout(() => p.remove(), 2200);
     }
 
-    // --- Mensaje grande con zoom + bounce ---
+    // --- Mensaje grande ---
     const msg = document.createElement('div');
     msg.innerHTML = `
       <div style="font-size: 70px; line-height: 1;">🎀</div>
@@ -305,7 +300,7 @@ def juego_rasca():
 
 
 # ============================================================
-# 2. MEMORAMA (CORREGIDO)
+# 2. MEMORAMA (aleatoriedad garantizada en cada reinicio)
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -386,12 +381,31 @@ def juego_memorama():
       const msg = document.getElementById('msg');
       const pairsEl = document.getElementById('pairs');
 
+      // Aleatoriedad criptográfica robusta
+      function randInt(max) {{
+        const buf = new Uint32Array(1);
+        crypto.getRandomValues(buf);
+        return buf[0] % max;
+      }}
+
+      // Fisher-Yates con crypto
+      function shuffle(arr) {{
+        const a = arr.slice();
+        for (let i = a.length - 1; i > 0; i--) {{
+          const j = randInt(i + 1);
+          [a[i], a[j]] = [a[j], a[i]];
+        }}
+        return a;
+      }}
+
       function build() {{
         grid.innerHTML = '';
         msg.innerHTML = '';
         matched = 0; first = null; lock = false; celebrated = false;
         pairsEl.textContent = '0';
-        const cards = [...ICONS, ...ICONS].sort(() => Math.random() - 0.5);
+
+        // Creamos pares y barajamos con crypto
+        const cards = shuffle([...ICONS, ...ICONS]);
         cards.forEach(icon => {{
           const c = document.createElement('div');
           c.className = 'card';
@@ -492,6 +506,12 @@ def juego_rompecabezas():
       let board = [];
       let solved = false;
 
+      function randInt(max) {{
+        const buf = new Uint32Array(1);
+        crypto.getRandomValues(buf);
+        return buf[0] % max;
+      }}
+
       function createSolved() {{
         board = [];
         for (let i = 1; i < SIZE * SIZE; i++) board.push(i);
@@ -502,7 +522,7 @@ def juego_rompecabezas():
         do {{
           board = [...Array(SIZE * SIZE).keys()];
           for (let i = board.length - 1; i > 0; i--) {{
-            const j = Math.floor(Math.random() * (i + 1));
+            const j = randInt(i + 1);
             [board[i], board[j]] = [board[j], board[i]];
           }}
         }} while (!isSolvable(board) || isSolved());
@@ -668,7 +688,7 @@ def juego_globo():
 
 
 # ============================================================
-# 5. BUSCA EL BEBÉ
+# 5. BUSCA EL BEBÉ (aleatorio + 10 fallos, sin revelar si pierde)
 # ============================================================
 def juego_buscaminas():
     mines_html = f"""
@@ -699,7 +719,10 @@ def juego_buscaminas():
       #msg {{
         margin-top: 14px; font-size: 24px; color: #c2185b;
         min-height: 40px; text-align: center; line-height: 1.3;
+        font-weight: bold;
       }}
+      #msg.error {{ color: #d32f2f; }}
+      #msg.win   {{ color: #c2185b; }}
       button {{
         margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
         background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
@@ -707,8 +730,10 @@ def juego_buscaminas():
     </style>
     </head>
     <body>
-      <div id="info">Encuentra las 3 celdas con 👶 · Fallos restantes:
-        <span id="lives">3</span></div>
+      <div id="info">
+        Encuentra las 3 celdas con 👶 · Fallos restantes:
+        <span id="lives">10</span>
+      </div>
       <div id="grid"></div>
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
@@ -719,18 +744,24 @@ def juego_buscaminas():
       const COLS = 6, ROWS = 5;
       const TOTAL = COLS * ROWS;
       const GIFTS = 3;
-      const MAX_ERRORS = 3;
+      const MAX_ERRORS = 10;
       let grid, lives, found, done, celebrated;
 
       const gridEl = document.getElementById('grid');
       const livesEl = document.getElementById('lives');
       const msg = document.getElementById('msg');
 
+      function randInt(max) {{
+        const buf = new Uint32Array(1);
+        crypto.getRandomValues(buf);
+        return buf[0] % max;
+      }}
+
       function reset() {{
         grid = Array(TOTAL).fill(false);
         let placed = 0;
         while (placed < GIFTS) {{
-          const i = Math.floor(Math.random() * TOTAL);
+          const i = randInt(TOTAL);
           if (!grid[i]) {{ grid[i] = true; placed++; }}
         }}
         lives = MAX_ERRORS;
@@ -739,6 +770,7 @@ def juego_buscaminas():
         celebrated = false;
         livesEl.textContent = lives;
         msg.innerHTML = '';
+        msg.className = '';
         render();
       }}
 
@@ -756,12 +788,15 @@ def juego_buscaminas():
       function reveal(i, el) {{
         if (done || el.classList.contains('safe')) return;
         el.classList.add('safe');
+
         if (grid[i]) {{
           el.classList.add('good');
           el.textContent = '👶';
           found++;
+
           if (found === GIFTS) {{
             done = true;
+            msg.className = 'win';
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
             if (!celebrated) {{
               celebrated = true;
@@ -773,20 +808,12 @@ def juego_buscaminas():
           el.textContent = '✖';
           lives--;
           livesEl.textContent = lives;
+
           if (lives <= 0) {{
             done = true;
-            [...gridEl.children].forEach((child, idx) => {{
-              if (grid[idx]) {{
-                child.classList.add('safe', 'good');
-                child.textContent = '👶';
-              }}
-            }});
-            msg.innerHTML =
-              '😅 Se acabaron los intentos. ¡Pero mira lo que había! 🎀 <strong>María</strong> 🎀';
-            if (!celebrated) {{
-              celebrated = true;
-              setTimeout(() => celebrate(), 250);
-            }}
+            msg.className = 'error';
+            msg.innerHTML = '❌ ¡Se acabaron los intentos!<br>Vuelve a empezar...';
+            setTimeout(() => reset(), 2000);
           }}
         }}
       }}
@@ -832,7 +859,7 @@ with tab4:
 
 with tab5:
     st.subheader("Encuentra a los bebés")
-    st.caption("Destapa celdas y encuentra 3 👶 antes de agotar los 3 intentos fallidos 👇")
+    st.caption("Encuentra 3 👶 antes de agotar los 10 fallos. Si pierdes, se reinicia 👇")
     juego_buscaminas()
 
 st.markdown("---")
