@@ -297,7 +297,7 @@ def juego_rasca():
 
 
 # ============================================================
-# 2. MEMORAMA (aleatoriedad reforzada + íconos únicos)
+# 2. MEMORAMA (10 parejas)
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -318,13 +318,13 @@ def juego_memorama():
       }}
       #grid {{
         display: grid;
-        grid-template-columns: repeat(6, 82px);
-        grid-template-rows: repeat(5, 82px);
-        gap: 8px;
+        grid-template-columns: repeat(5, 96px);
+        grid-template-rows: repeat(4, 96px);
+        gap: 10px;
         justify-content: center;
       }}
       .card {{
-        width: 82px; height: 82px;
+        width: 96px; height: 96px;
         perspective: 600px; cursor: pointer;
       }}
       .inner {{
@@ -336,12 +336,12 @@ def juego_memorama():
       .face, .back {{
         position: absolute; inset: 0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 34px; backface-visibility: hidden;
+        font-size: 38px; backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
       }}
       .face {{
         background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
-        color: #fff; font-size: 26px;
+        color: #fff; font-size: 28px;
       }}
       .back {{
         background: #fff; border: 2px solid #cfe4ff;
@@ -360,7 +360,7 @@ def juego_memorama():
     </style>
     </head>
     <body>
-      <div id="info">Parejas encontradas: <span id="pairs">0</span> / 15</div>
+      <div id="info">Parejas encontradas: <span id="pairs">0</span> / 10</div>
       <div id="grid"></div>
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
@@ -368,10 +368,9 @@ def juego_memorama():
     {CELEBRATION_SCRIPT}
 
     <script>
-      // 15 íconos únicos, sin ambigüedad visual
+      // 10 íconos únicos y visualmente distintos
       const ICONS = [
-        '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
-        '🦋','🌈','🍭','🩵','🎁','🐣'
+        '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖','🦋'
       ];
 
       let first = null, lock = false, matched = 0, celebrated = false;
@@ -381,14 +380,12 @@ def juego_memorama():
       const msg = document.getElementById('msg');
       const pairsEl = document.getElementById('pairs');
 
-      // Aleatoriedad criptográfica
       function randInt(max) {{
         const buf = new Uint32Array(1);
         crypto.getRandomValues(buf);
         return buf[0] % max;
       }}
 
-      // Fisher-Yates con crypto
       function shuffle(arr) {{
         const a = arr.slice();
         for (let i = a.length - 1; i > 0; i--) {{
@@ -398,14 +395,10 @@ def juego_memorama():
         return a;
       }}
 
-      // Mezcla reforzada: baraja cartas + rota el orden base de íconos
-      // y fuerza un layout distinto al anterior
       function generateLayout() {{
         let attempt = 0;
         let cards;
         do {{
-          // Rotamos la lista base de íconos para que ni siquiera
-          // los "pares" tengan el mismo orden alfabético/visual
           const rotated = shuffle(ICONS);
           cards = shuffle([...rotated, ...rotated]);
           const fingerprint = cards.join('');
@@ -449,7 +442,7 @@ def juego_memorama():
           card.classList.add('matched');
           matched++; first = null;
           pairsEl.textContent = matched;
-          if (matched === 15 && !celebrated) {{
+          if (matched === 10 && !celebrated) {{
             celebrated = true;
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
             setTimeout(() => celebrate(), 250);
@@ -470,7 +463,7 @@ def juego_memorama():
     </body>
     </html>
     """
-    components.html(memory_html, height=700)
+    components.html(memory_html, height=600)
 
 
 # ============================================================
@@ -1213,8 +1206,8 @@ with tab1:
     juego_rasca()
 
 with tab2:
-    st.subheader("Encuentra las 15 parejas")
-    st.caption("Voltea las cartas y encuentra los 15 pares 👇")
+    st.subheader("Encuentra las 10 parejas")
+    st.caption("Voltea las cartas y encuentra los 10 pares 👇")
     juego_memorama()
 
 with tab3:
