@@ -715,7 +715,7 @@ def juego_globo():
 
 
 # ============================================================
-# 5. TRIQUI DE BOMBAS (nuevo)
+# 5. TRIQUI DE BOMBAS (5 rosas / 4 azules, siempre triki rosa)
 # ============================================================
 def juego_triqui_bombas():
     bombitas_html = f"""
@@ -738,8 +738,15 @@ def juego_triqui_bombas():
         color: #c2185b;
         font-weight: bold;
         font-size: min(18px, 4.5vw);
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         text-align: center;
+      }}
+      #info {{
+        color: #666;
+        font-size: min(13px, 3.5vw);
+        text-align: center;
+        max-width: 480px;
+        margin-bottom: 10px;
       }}
       #board {{
         display: grid;
@@ -796,10 +803,6 @@ def juego_triqui_bombas():
                     0 0 20px rgba(76,110,245,.5);
         cursor: default;
       }}
-      .bomb.pink::after,
-      .bomb.blue::after {{
-        background: #888;
-      }}
       .bomb.win {{
         animation: pop 0.6s ease-out;
       }}
@@ -814,13 +817,11 @@ def juego_triqui_bombas():
         color: #2a4d8f; max-width: 480px;
       }}
       #msg.win   {{ color: #c2185b; }}
-      #msg.error {{ color: #d32f2f; }}
-      #msg.draw  {{ color: #e67e22; }}
-      #info {{
-        margin-top: 6px;
+      #msg.info  {{ color: #2a4d8f; }}
+      #counter {{
+        margin-top: 8px;
         color: #666;
-        font-size: min(13px, 3.5vw);
-        text-align: center;
+        font-size: min(14px, 3.6vw);
       }}
       button {{
         margin-top: 12px; padding: 8px 22px;
@@ -831,12 +832,14 @@ def juego_triqui_bombas():
     </style>
     </head>
     <body>
-      <div id="title">💗 Tú juegas con bombas rosas · La CPU con azules 💙</div>
+      <div id="title">💗 Presiona las bombas blancas y encuentra el triki rosa 💗</div>
       <div id="info">
-        Hay <b>5 rosas</b> y <b>4 azules</b>. Presiona las blancas para descubrirlas.
+        Hay <b>5 rosas</b> y <b>4 azules</b>. Las rosas forman
+        <b>3 en línea</b> — ¡descúbrelas todas para ganar!
       </div>
       <div id="board" style="margin-top:12px;"></div>
-      <div id="msg">Tu turno — presiona una bomba blanca ⚪</div>
+      <div id="msg" class="info">Presiona una bomba blanca ⚪</div>
+      <div id="counter">Bombas reveladas: <span id="rev">0</span> / 9</div>
       <button onclick="reset()">🔄 Reiniciar</button>
 
     {CELEBRATION_SCRIPT}
@@ -852,14 +855,15 @@ def juego_triqui_bombas():
         [0,4,8],[2,4,6]
       ];
 
-      let colors = [];      // 'pink' | 'blue' | null (oculto)
-      let revealed = [];    // true/false
+      let colors = [];
+      let revealed = [];
+      let winningLine = [];
       let done = false;
       let celebrated = false;
-      let userTurn = true;
 
       const boardEl = document.getElementById('board');
       const msg = document.getElementById('msg');
+      const revEl = document.getElementById('rev');
 
       function randInt(max) {{
         const buf = new Uint32Array(1);
@@ -867,25 +871,45 @@ def juego_triqui_bombas():
         return buf[0] % max;
       }}
 
-      // Mezcla las posiciones de 5 rosas y 4 azules
-      function shuffleColors() {{
-        const arr = Array(PINK_COUNT).fill('pink')
-          .concat(Array(BLUE_COUNT).fill('blue'));
-        for (let i = arr.length - 1; i > 0; i--) {{
+      function generateBoard() {{
+        // 1. Elegir una línea ganadora aleatoria
+        const line = WINS[randInt(WINS.length)];
+        winningLine = line;
+
+        // 2. Marcar esas 3 celdas como rosas obligatorias
+        colors = Array(TOTAL).fill(null);
+        line.forEach(i => colors[i] = 'pink');
+
+        // 3. Las 2 rosas restantes van a celdas aleatorias de las 6 libres
+        const remaining = [];
+        for (let i = 0; i < TOTAL; i++) if (colors[i] === null) remaining.push(i);
+
+        // Barajar las celdas libres
+        for (let i = remaining.length - 1; i > 0; i--) {{
           const j = randInt(i + 1);
-          [arr[i], arr[j]] = [arr[j], arr[i]];
+          [remaining[i], remaining[j]] = [remaining[j], remaining[i]];
         }}
-        return arr;
+
+        // Primeras 2 → rosas
+        remaining.slice(0, 2).forEach(i => colors[i] = 'pink');
+        // Las 4 restantes → azules
+        remaining.slice(2).forEach(i => colors[i] = 'blue');
+
+        // 4. Verificación: exactamente 5 rosas y 4 azules
+        const pinks = colors.filter(c => c === 'pink').length;
+        const blues = colors.filter(c => c === 'blue').length;
+        console.assert(pinks === 5 && blues === 4,
+          'Error de reparto: pinks=' + pinks + ' blues=' + blues);
       }}
 
       function reset() {{
-        colors = shuffleColors();
+        generateBoard();
         revealed = Array(TOTAL).fill(false);
         done = false;
         celebrated = false;
-        userTurn = true;
-        msg.className = '';
-        msg.innerHTML = 'Tu turno — presiona una bomba blanca ⚪';
+        msg.className = 'info';
+        msg.innerHTML = 'Presiona una bomba blanca ⚪';
+        revEl.textContent = '0';
         render();
       }}
 
@@ -898,132 +922,42 @@ def juego_triqui_bombas():
             b.classList.add(colors[i]);
             b.textContent = colors[i] === 'pink' ? '💗' : '💙';
           }}
-          b.onclick = () => userReveal(i);
+          b.onclick = () => reveal(i);
           boardEl.appendChild(b);
         }}
       }}
 
-      // Devuelve el ganador ('pink' | 'blue' | 'draw' | null)
-      function checkWinner(revealedColors) {{
-        for (const line of WINS) {{
-          const [a,b,c] = line;
-          if (revealed[a] && revealed[b] && revealed[c] &&
-              revealedColors[a] === revealedColors[b] &&
-              revealedColors[a] === revealedColors[c]) {{
-            return {{ player: revealedColors[a], line }};
-          }}
-        }}
-        if (revealed.every(x => x)) return {{ player: 'draw', line: [] }};
-        return null;
-      }}
-
-      function highlight(line) {{
-        [...boardEl.children].forEach((el, i) => {{
-          if (line.includes(i)) el.classList.add('win');
-        }});
-      }}
-
-      // Cuenta cuántas rosas/azules ya se revelaron
-      function revealedColorsArray() {{
-        return revealed.map((r, i) => r ? colors[i] : null);
-      }}
-
-      // El usuario revela una bomba (blanca → rosa o azul según su color real)
-      function userReveal(i) {{
+      function reveal(i) {{
         if (done || revealed[i]) return;
         revealed[i] = true;
+
+        const count = revealed.filter(x => x).length;
+        revEl.textContent = count;
+
         render();
 
-        const state = revealedColorsArray();
-        let w = checkWinner(state);
-        if (w) return finish(w);
+        // Verificar si las 3 celdas de la línea ganadora están reveladas
+        const lineComplete = winningLine.every(idx => revealed[idx]);
 
-        msg.innerHTML = 'Turno de la CPU... 💙';
-        userTurn = false;
-        setTimeout(cpuTurn, 500);
-      }}
-
-      // La CPU revela una bomba blanca
-      function cpuTurn() {{
-        if (done) return;
-
-        // Estrategia: si puede ganar revelando una azul → la hace
-        // Si no, revela cualquier bomba blanca disponible
-        const hidden = [];
-        for (let i = 0; i < TOTAL; i++) if (!revealed[i]) hidden.push(i);
-
-        let choice = null;
-
-        // Buscar jugada ganadora para 'blue'
-        for (const line of WINS) {{
-          const [a,b,c] = line;
-          const vals = [a,b,c].map(idx => revealed[idx] ? colors[idx] : null);
-          const blues = vals.filter(v => v === 'blue').length;
-          const nulls = vals.filter(v => v === null).length;
-          if (blues === 2 && nulls === 1) {{
-            const idx = [a,b,c][vals.indexOf(null)];
-            if (colors[idx] === 'blue') {{ choice = idx; break; }}
-          }}
-        }}
-
-        // Bloquear al usuario: si el usuario tiene 2 rosas en línea
-        if (choice === null) {{
-          for (const line of WINS) {{
-            const [a,b,c] = line;
-            const vals = [a,b,c].map(idx => revealed[idx] ? colors[idx] : null);
-            const pinks = vals.filter(v => v === 'pink').length;
-            const nulls = vals.filter(v => v === null).length;
-            if (pinks === 2 && nulls === 1) {{
-              const idx = [a,b,c][vals.indexOf(null)];
-              if (colors[idx] === 'blue') {{ choice = idx; break; }}
-            }}
-          }}
-        }}
-
-        // Centro
-        if (choice === null && !revealed[4]) choice = 4;
-
-        // Esquina aleatoria
-        if (choice === null) {{
-          const corners = [0,2,6,8].filter(i => !revealed[i]);
-          if (corners.length) choice = corners[randInt(corners.length)];
-        }}
-
-        // Cualquier bomba oculta
-        if (choice === null && hidden.length) {{
-          choice = hidden[randInt(hidden.length)];
-        }}
-
-        if (choice !== null) {{
-          revealed[choice] = true;
-          render();
-          const state = revealedColorsArray();
-          let w = checkWinner(state);
-          if (w) return finish(w);
-        }}
-
-        userTurn = true;
-        msg.innerHTML = 'Tu turno — presiona una bomba blanca ⚪';
-      }}
-
-      function finish(w) {{
-        done = true;
-        if (w.player === 'draw') {{
-          msg.className = 'draw';
-          msg.innerHTML = '😅 Empate... pulsa Reiniciar para intentar de nuevo';
-          return;
-        }}
-        highlight(w.line);
-        if (w.player === 'pink') {{
+        if (lineComplete && !done) {{
+          done = true;
+          // Resaltar la línea ganadora
+          [...boardEl.children].forEach((el, idx) => {{
+            if (winningLine.includes(idx)) el.classList.add('win');
+          }});
           msg.className = 'win';
-          msg.innerHTML = '🎉 ¡Ganaste! 🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          msg.innerHTML = '🎉 ¡Tres rosas en línea! 🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
           if (!celebrated) {{
             celebrated = true;
-            setTimeout(() => celebrate(), 300);
+            setTimeout(() => celebrate(), 400);
           }}
+        }} else if (count < TOTAL) {{
+          const missing = winningLine.filter(idx => !revealed[idx]).length;
+          msg.className = 'info';
+          msg.innerHTML = `¡Sigue! Faltan <b>${{missing}}</b> rosa${{missing > 1 ? 's' : ''}} por descubrir del triki 👀`;
         }} else {{
-          msg.className = 'error';
-          msg.innerHTML = '❌ La CPU ganó con azules... intenta otra vez';
+          msg.className = 'info';
+          msg.innerHTML = '😅 Algo salió mal, presiona Reiniciar';
         }}
       }}
 
@@ -1068,7 +1002,7 @@ with tab4:
 
 with tab5:
     st.subheader("Triqui de Bombas")
-    st.caption("Presiona bombas blancas ⚪ para revelarlas como 💗 (tú) o 💙 (CPU). **Gana con 3 rosas en línea** 👇")
+    st.caption("Presiona bombas blancas ⚪ hasta descubrir **3 rosas 💗 en línea** 👇")
     juego_triqui_bombas()
 
 st.markdown("---")
