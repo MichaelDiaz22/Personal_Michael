@@ -43,12 +43,11 @@ SEED = st.session_state.reset_seed
 
 
 # ============================================================
-# BLOQUE DE ANIMACIÓN DE REVELACIÓN (compartido)
+# ANIMACIÓN DE REVELACIÓN (compartida)
 # ============================================================
 CELEBRATION_SCRIPT = """
 <script>
   function celebrate() {
-    // --- Overlay flash ---
     const overlay = document.createElement('div');
     overlay.style.cssText = `
       position: fixed; inset: 0; z-index: 9998;
@@ -60,7 +59,6 @@ CELEBRATION_SCRIPT = """
     document.body.appendChild(overlay);
     setTimeout(() => overlay.remove(), 1200);
 
-    // --- Partículas ---
     const EMOJIS = ['🎉','🎀','💙','💗','⭐','✨','🌸','👶','🎈','💖'];
     const N = 70;
     for (let i = 0; i < N; i++) {
@@ -87,7 +85,6 @@ CELEBRATION_SCRIPT = """
       setTimeout(() => p.remove(), 2200);
     }
 
-    // --- Mensaje grande ---
     const msg = document.createElement('div');
     msg.innerHTML = `
       <div style="font-size: 70px; line-height: 1;">🎀</div>
@@ -300,7 +297,7 @@ def juego_rasca():
 
 
 # ============================================================
-# 2. MEMORAMA (aleatoriedad garantizada en cada reinicio)
+# 2. MEMORAMA
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -381,14 +378,12 @@ def juego_memorama():
       const msg = document.getElementById('msg');
       const pairsEl = document.getElementById('pairs');
 
-      // Aleatoriedad criptográfica robusta
       function randInt(max) {{
         const buf = new Uint32Array(1);
         crypto.getRandomValues(buf);
         return buf[0] % max;
       }}
 
-      // Fisher-Yates con crypto
       function shuffle(arr) {{
         const a = arr.slice();
         for (let i = a.length - 1; i > 0; i--) {{
@@ -403,8 +398,6 @@ def juego_memorama():
         msg.innerHTML = '';
         matched = 0; first = null; lock = false; celebrated = false;
         pairsEl.textContent = '0';
-
-        // Creamos pares y barajamos con crypto
         const cards = shuffle([...ICONS, ...ICONS]);
         cards.forEach(icon => {{
           const c = document.createElement('div');
@@ -502,7 +495,6 @@ def juego_rompecabezas():
         '#e63946','#f77f00','#fcbf49','#06a77d','#4c6ef5',
         '#8338ec','#ff6b9d','#00b4d8'
       ];
-
       let board = [];
       let solved = false;
 
@@ -688,7 +680,7 @@ def juego_globo():
 
 
 # ============================================================
-# 5. BUSCA EL BEBÉ (aleatorio + 10 fallos, sin revelar si pierde)
+# 5. BUSCA EL BEBÉ
 # ============================================================
 def juego_buscaminas():
     mines_html = f"""
@@ -827,14 +819,366 @@ def juego_buscaminas():
 
 
 # ============================================================
+# 6. TRIQUI
+# ============================================================
+def juego_triqui():
+    triqui_html = f"""
+    <!-- seed:{SEED} -->
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff;
+             padding: 10px; }}
+      #board {{
+        display: grid;
+        grid-template-columns: repeat(3, 100px);
+        grid-template-rows: repeat(3, 100px);
+        gap: 6px; background: #cfe4ff; padding: 6px;
+        border-radius: 12px;
+      }}
+      .cell {{
+        width: 100px; height: 100px;
+        background: #fff; border-radius: 8px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 52px; font-weight: bold;
+        cursor: pointer; user-select: none;
+        transition: transform .12s;
+      }}
+      .cell:hover {{ transform: scale(1.04); }}
+      .cell.x {{ color: #2a4d8f; }}
+      .cell.o {{ color: #c2185b; }}
+      .cell.win {{ background: #ffeaa7; }}
+      #msg {{
+        margin-top: 14px; font-size: 22px; color: #2a4d8f;
+        min-height: 34px; text-align: center; font-weight: bold;
+      }}
+      #msg.error {{ color: #d32f2f; }}
+      #msg.draw  {{ color: #e67e22; }}
+      #msg.win   {{ color: #c2185b; }}
+      button {{
+        margin-top: 10px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+      }}
+    </style>
+    </head>
+    <body>
+      <div id="board"></div>
+      <div id="msg"></div>
+      <button onclick="reset()">🔄 Reiniciar</button>
+
+    {CELEBRATION_SCRIPT}
+
+    <script>
+      const USER = 'X';
+      const CPU  = 'O';
+      const WINS = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      let board, done, celebrated;
+
+      const boardEl = document.getElementById('board');
+      const msg = document.getElementById('msg');
+
+      function randInt(max) {{
+        const buf = new Uint32Array(1);
+        crypto.getRandomValues(buf);
+        return buf[0] % max;
+      }}
+
+      function reset() {{
+        board = Array(9).fill('');
+        done = false;
+        celebrated = false;
+        msg.className = '';
+        msg.innerHTML = 'Tu turno — juegas con ❌';
+        render();
+      }}
+
+      function render() {{
+        boardEl.innerHTML = '';
+        board.forEach((v, i) => {{
+          const c = document.createElement('div');
+          c.className = 'cell' + (v ? ' ' + v.toLowerCase() : '');
+          c.textContent = v;
+          c.onclick = () => play(i);
+          boardEl.appendChild(c);
+        }});
+      }}
+
+      function winner(b) {{
+        for (const line of WINS) {{
+          const [a, c, d] = line;
+          if (b[a] && b[a] === b[c] && b[a] === b[d])
+            return {{ player: b[a], line: line }};
+        }}
+        if (b.every(x => x)) return {{ player: 'draw', line: [] }};
+        return null;
+      }}
+
+      function highlight(line) {{
+        [...boardEl.children].forEach((el, i) => {{
+          if (line.includes(i)) el.classList.add('win');
+        }});
+      }}
+
+      function play(i) {{
+        if (done || board[i]) return;
+        board[i] = USER;
+        render();
+        let w = winner(board);
+        if (w) return finish(w);
+        msg.innerHTML = 'Turno de la CPU...';
+        setTimeout(cpuMove, 350);
+      }}
+
+      function bestMove(player) {{
+        for (const line of WINS) {{
+          const vals = line.map(i => board[i]);
+          const countP = vals.filter(v => v === player).length;
+          const countEmpty = vals.filter(v => v === '').length;
+          if (countP === 2 && countEmpty === 1) {{
+            return line[vals.indexOf('')];
+          }}
+        }}
+        return null;
+      }}
+
+      function cpuMove() {{
+        if (done) return;
+        let move = bestMove(CPU);
+        if (move === null) move = bestMove(USER);
+        if (move === null && board[4] === '') move = 4;
+        if (move === null) {{
+          const corners = [0,2,6,8].filter(i => board[i] === '');
+          if (corners.length) {{
+            // 70% óptimo, 30% aleatorio para dar chance
+            if (Math.random() < 0.7) {{
+              move = corners[randInt(corners.length)];
+            }}
+          }}
+        }}
+        if (move === null) {{
+          const libres = board.map((v,i) => v === '' ? i : -1).filter(i => i >= 0);
+          move = libres[randInt(libres.length)];
+        }}
+        board[move] = CPU;
+        render();
+        let w = winner(board);
+        if (w) return finish(w);
+        msg.innerHTML = 'Tu turno — juegas con ❌';
+      }}
+
+      function finish(w) {{
+        done = true;
+        if (w.player === 'draw') {{
+          msg.className = 'draw';
+          msg.innerHTML = '😅 Empate... intenta de nuevo';
+          return;
+        }}
+        highlight(w.line);
+        if (w.player === USER) {{
+          msg.className = 'win';
+          msg.innerHTML = '🎉 ¡Ganaste! 🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          if (!celebrated) {{
+            celebrated = true;
+            setTimeout(() => celebrate(), 300);
+          }}
+        }} else {{
+          msg.className = 'error';
+          msg.innerHTML = '❌ Perdiste... inténtalo otra vez';
+        }}
+      }}
+
+      reset();
+    </script>
+    </body>
+    </html>
+    """
+    components.html(triqui_html, height=600)
+
+
+# ============================================================
+# 7. ACRÓSTICO (M A R Í A)
+# ============================================================
+def juego_acrostico():
+    acrostico_html = f"""
+    <!-- seed:{SEED} -->
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff;
+             padding: 16px; }}
+      #intro {{
+        max-width: 560px; text-align: center;
+        color: #555; font-size: 15px; margin-bottom: 12px;
+      }}
+      #acrostic {{
+        display: flex; flex-direction: column; gap: 12px;
+        width: 100%; max-width: 560px;
+      }}
+      .row {{
+        display: flex; align-items: flex-start; gap: 12px;
+        background: #f9fafc; padding: 10px 14px;
+        border-radius: 10px; border-left: 4px solid #cfe4ff;
+      }}
+      .letter {{
+        font-size: 36px; font-weight: 900;
+        width: 44px; text-align: center;
+        background: linear-gradient(90deg,#c2185b,#2a4d8f);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        flex-shrink: 0;
+      }}
+      .content {{ flex: 1; }}
+      .question {{
+        font-size: 15px; color: #333; margin-bottom: 6px;
+      }}
+      .answer-row {{
+        display: flex; gap: 8px; align-items: center;
+      }}
+      input {{
+        flex: 1; padding: 8px 12px; font-size: 15px;
+        border: 1px solid #cfe4ff; border-radius: 6px;
+        outline: none; transition: border .2s;
+      }}
+      input:focus {{ border-color: #c2185b; }}
+      input.ok {{ border-color: #06a77d; background: #f0fff8; }}
+      input.bad {{ border-color: #d32f2f; background: #fff5f5; }}
+      .status {{
+        font-size: 18px; width: 22px; text-align: center;
+      }}
+      #msg {{
+        margin-top: 18px; font-size: 22px; color: #c2185b;
+        min-height: 34px; text-align: center; font-weight: bold;
+      }}
+      #msg.error {{ color: #d32f2f; }}
+      button {{
+        margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+      }}
+      #check {{
+        background: #c2185b; color: #fff; border-color: #c2185b;
+        font-weight: bold;
+      }}
+    </style>
+    </head>
+    <body>
+      <div id="intro">
+        Resuelve el siguiente acróstico. Cada respuesta empieza con la
+        letra de la columna izquierda. ¡Si aciertas todas, verás el nombre!
+      </div>
+      <div id="acrostic"></div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button id="check" onclick="checkAll()">✅ Comprobar</button>
+        <button onclick="reset()">🔄 Reiniciar</button>
+      </div>
+      <div id="msg"></div>
+
+    {CELEBRATION_SCRIPT}
+
+    <script>
+      // Estructura: letra, pregunta y respuesta (sin tildes, en minúsculas, sin espacios)
+      const DATA = [
+        {{ letter: 'M', q: 'Fruto rojo pequeño y dulce, típico del verano.',
+           a: 'mora',
+           hint: 'Empieza con M, tiene 4 letras' }},
+        {{ letter: 'A', q: 'Ave rapaz que vuela alto y caza.',
+           a: 'aguila',
+           hint: 'Empieza con A, 6 letras' }},
+        {{ letter: 'R', q: 'Animal pequeño con orejas largas y salta.',
+           a: 'rana',
+           hint: 'Empieza con R, 4 letras' }},
+        {{ letter: 'I', q: 'Isla pequeña en medio del mar.',
+           a: 'isla',
+           hint: 'Empieza con I, 4 letras' }},
+        {{ letter: 'A', q: 'Ave nocturna que gira la cabeza 180°.',
+           a: 'ave',
+           hint: 'Empieza con A, 3 letras' }}
+      ];
+
+      const container = document.getElementById('acrostic');
+      const msg = document.getElementById('msg');
+      let solved = false;
+
+      function normalize(s) {{
+        return s.trim().toLowerCase()
+          .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+      }}
+
+      function build() {{
+        container.innerHTML = '';
+        msg.innerHTML = '';
+        msg.className = '';
+        solved = false;
+        DATA.forEach((item, i) => {{
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.innerHTML = `
+            <div class="letter">${{item.letter}}</div>
+            <div class="content">
+              <div class="question">${{item.q}}<br>
+                <small style="color:#888">${{item.hint}}</small>
+              </div>
+              <div class="answer-row">
+                <input type="text" id="in${{i}}" placeholder="Tu respuesta..."
+                       autocomplete="off" />
+                <div class="status" id="st${{i}}"></div>
+              </div>
+            </div>`;
+          container.appendChild(row);
+        }});
+      }}
+
+      function checkAll() {{
+        if (solved) return;
+        let allOk = true;
+        DATA.forEach((item, i) => {{
+          const input = document.getElementById('in' + i);
+          const status = document.getElementById('st' + i);
+          const val = normalize(input.value);
+          const ok = val === item.a;
+          input.classList.remove('ok', 'bad');
+          input.classList.add(ok ? 'ok' : 'bad');
+          status.textContent = ok ? '✅' : '❌';
+          if (!ok) allOk = false;
+        }});
+        if (allOk) {{
+          solved = true;
+          msg.className = '';
+          msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          setTimeout(() => celebrate(), 250);
+        }} else {{
+          msg.className = 'error';
+          msg.innerHTML = '❌ Algunas respuestas no son correctas. ¡Inténtalo otra vez!';
+        }}
+      }}
+
+      function reset() {{ build(); }}
+      build();
+    </script>
+    </body>
+    </html>
+    """
+    components.html(acrostico_html, height=680)
+
+
+# ============================================================
 # PESTAÑAS
 # ============================================================
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🎨 Rasca y Gana",
     "🃏 Memorama",
     "🧩 Rompecabezas",
     "🎈 Globo Sorpresa",
-    "👶 Busca el Bebé"
+    "👶 Busca el Bebé",
+    "⭕ Triqui",
+    "🔤 Acróstico"
 ])
 
 with tab1:
@@ -861,6 +1205,16 @@ with tab5:
     st.subheader("Encuentra a los bebés")
     st.caption("Encuentra 3 👶 antes de agotar los 10 fallos. Si pierdes, se reinicia 👇")
     juego_buscaminas()
+
+with tab6:
+    st.subheader("Juega Triqui (Tres en línea)")
+    st.caption("Tú juegas con ❌. Debes **ganar** para ver la revelación. Si pierdes o empatas, se reinicia 👇")
+    juego_triqui()
+
+with tab7:
+    st.subheader("Resuelve el acróstico")
+    st.caption("Contesta las 5 preguntas. Las iniciales forman un nombre secreto 👇")
+    juego_acrostico()
 
 st.markdown("---")
 st.caption("💙 Hecho con amor para la llegada de María 🎀")
