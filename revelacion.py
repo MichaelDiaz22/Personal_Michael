@@ -1000,6 +1000,174 @@ def juego_triqui():
     """
     components.html(triqui_html, height=600)
 
+
+# ============================================================
+# 7. ACRÓSTICO (M A R Í A)
+# ============================================================
+def juego_acrostico():
+    acrostico_html = f"""
+    <!-- seed:{SEED} -->
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+      body {{ margin: 0; display: flex; flex-direction: column;
+             align-items: center; font-family: sans-serif; background: #fff;
+             padding: 16px; }}
+      #intro {{
+        max-width: 560px; text-align: center;
+        color: #555; font-size: 15px; margin-bottom: 12px;
+      }}
+      #acrostic {{
+        display: flex; flex-direction: column; gap: 12px;
+        width: 100%; max-width: 560px;
+      }}
+      .row {{
+        display: flex; align-items: flex-start; gap: 12px;
+        background: #f9fafc; padding: 10px 14px;
+        border-radius: 10px; border-left: 4px solid #cfe4ff;
+      }}
+      .letter {{
+        font-size: 36px; font-weight: 900;
+        width: 44px; text-align: center;
+        background: linear-gradient(90deg,#c2185b,#2a4d8f);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        flex-shrink: 0;
+      }}
+      .content {{ flex: 1; }}
+      .question {{
+        font-size: 15px; color: #333; margin-bottom: 6px;
+      }}
+      .answer-row {{
+        display: flex; gap: 8px; align-items: center;
+      }}
+      input {{
+        flex: 1; padding: 8px 12px; font-size: 15px;
+        border: 1px solid #cfe4ff; border-radius: 6px;
+        outline: none; transition: border .2s;
+      }}
+      input:focus {{ border-color: #c2185b; }}
+      input.ok {{ border-color: #06a77d; background: #f0fff8; }}
+      input.bad {{ border-color: #d32f2f; background: #fff5f5; }}
+      .status {{
+        font-size: 18px; width: 22px; text-align: center;
+      }}
+      #msg {{
+        margin-top: 18px; font-size: 22px; color: #c2185b;
+        min-height: 34px; text-align: center; font-weight: bold;
+      }}
+      #msg.error {{ color: #d32f2f; }}
+      button {{
+        margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
+        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+      }}
+      #check {{
+        background: #c2185b; color: #fff; border-color: #c2185b;
+        font-weight: bold;
+      }}
+    </style>
+    </head>
+    <body>
+      <div id="intro">
+        Resuelve el siguiente acróstico. Cada respuesta empieza con la
+        letra de la columna izquierda. ¡Si aciertas todas, verás el nombre!
+      </div>
+      <div id="acrostic"></div>
+      <div style="display:flex; gap:10px; margin-top:14px;">
+        <button id="check" onclick="checkAll()">✅ Comprobar</button>
+        <button onclick="reset()">🔄 Reiniciar</button>
+      </div>
+      <div id="msg"></div>
+
+    {CELEBRATION_SCRIPT}
+
+    <script>
+      // Estructura: letra, pregunta y respuesta (sin tildes, en minúsculas, sin espacios)
+      const DATA = [
+        {{ letter: 'M', q: 'Fruto rojo pequeño y dulce, típico del verano.',
+           a: 'mora',
+           hint: 'Empieza con M, tiene 4 letras' }},
+        {{ letter: 'A', q: 'Ave rapaz que vuela alto y caza.',
+           a: 'aguila',
+           hint: 'Empieza con A, 6 letras' }},
+        {{ letter: 'R', q: 'Animal pequeño con orejas largas y salta.',
+           a: 'rana',
+           hint: 'Empieza con R, 4 letras' }},
+        {{ letter: 'I', q: 'Isla pequeña en medio del mar.',
+           a: 'isla',
+           hint: 'Empieza con I, 4 letras' }},
+        {{ letter: 'A', q: 'Ave nocturna que gira la cabeza 180°.',
+           a: 'ave',
+           hint: 'Empieza con A, 3 letras' }}
+      ];
+
+      const container = document.getElementById('acrostic');
+      const msg = document.getElementById('msg');
+      let solved = false;
+
+      function normalize(s) {{
+        return s.trim().toLowerCase()
+          .normalize('NFD').replace(/[\\u0300-\\u036f]/g, '');
+      }}
+
+      function build() {{
+        container.innerHTML = '';
+        msg.innerHTML = '';
+        msg.className = '';
+        solved = false;
+        DATA.forEach((item, i) => {{
+          const row = document.createElement('div');
+          row.className = 'row';
+          row.innerHTML = `
+            <div class="letter">${{item.letter}}</div>
+            <div class="content">
+              <div class="question">${{item.q}}<br>
+                <small style="color:#888">${{item.hint}}</small>
+              </div>
+              <div class="answer-row">
+                <input type="text" id="in${{i}}" placeholder="Tu respuesta..."
+                       autocomplete="off" />
+                <div class="status" id="st${{i}}"></div>
+              </div>
+            </div>`;
+          container.appendChild(row);
+        }});
+      }}
+
+      function checkAll() {{
+        if (solved) return;
+        let allOk = true;
+        DATA.forEach((item, i) => {{
+          const input = document.getElementById('in' + i);
+          const status = document.getElementById('st' + i);
+          const val = normalize(input.value);
+          const ok = val === item.a;
+          input.classList.remove('ok', 'bad');
+          input.classList.add(ok ? 'ok' : 'bad');
+          status.textContent = ok ? '✅' : '❌';
+          if (!ok) allOk = false;
+        }});
+        if (allOk) {{
+          solved = true;
+          msg.className = '';
+          msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
+          setTimeout(() => celebrate(), 250);
+        }} else {{
+          msg.className = 'error';
+          msg.innerHTML = '❌ Algunas respuestas no son correctas. ¡Inténtalo otra vez!';
+        }}
+      }}
+
+      function reset() {{ build(); }}
+      build();
+    </script>
+    </body>
+    </html>
+    """
+    components.html(acrostico_html, height=680)
+
+
 # ============================================================
 # PESTAÑAS
 # ============================================================
@@ -1009,7 +1177,8 @@ tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "🧩 Rompecabezas",
     "🎈 Globo Sorpresa",
     "👶 Busca el Bebé",
-    "⭕ Triqui"
+    "⭕ Triqui",
+    "🔤 Acróstico"
 ])
 
 with tab1:
