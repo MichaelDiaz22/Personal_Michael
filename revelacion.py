@@ -297,7 +297,7 @@ def juego_rasca():
 
 
 # ============================================================
-# 2. MEMORAMA (10 parejas)
+# 2. MEMORAMA (15 parejas, layout responsivo)
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -305,27 +305,35 @@ def juego_memorama():
     <!DOCTYPE html>
     <html>
     <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
       html, body {{
         margin: 0; padding: 0;
         font-family: sans-serif;
         background: #fff;
         width: 100%;
+        overflow-x: hidden;
       }}
       body {{
         display: flex; flex-direction: column; align-items: center;
-        padding: 8px 0;
+        padding: 6px 4px;
+        box-sizing: border-box;
       }}
       #grid {{
         display: grid;
-        grid-template-columns: repeat(5, 96px);
-        grid-template-rows: repeat(4, 96px);
-        gap: 10px;
+        /* 6 columnas × 5 filas, cada celda se adapta al ancho del viewport */
+        grid-template-columns: repeat(6, min(62px, 14vw));
+        grid-template-rows: repeat(5, min(62px, 14vw));
+        gap: min(8px, 1.6vw);
         justify-content: center;
+        width: 100%;
+        max-width: 100%;
       }}
       .card {{
-        width: 96px; height: 96px;
-        perspective: 600px; cursor: pointer;
+        width: 100%;
+        height: 100%;
+        perspective: 600px;
+        cursor: pointer;
       }}
       .inner {{
         position: relative; width: 100%; height: 100%;
@@ -336,12 +344,14 @@ def juego_memorama():
       .face, .back {{
         position: absolute; inset: 0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
-        font-size: 38px; backface-visibility: hidden;
+        font-size: min(30px, 7vw);
+        backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
       }}
       .face {{
         background: linear-gradient(135deg,#cfe4ff,#ffd1e3);
-        color: #fff; font-size: 28px;
+        color: #fff;
+        font-size: min(22px, 5vw);
       }}
       .back {{
         background: #fff; border: 2px solid #cfe4ff;
@@ -349,18 +359,23 @@ def juego_memorama():
       }}
       .card.matched .back {{ border-color: #ffb3d1; background: #fff0f7; }}
       #msg {{
-        margin-top: 16px; font-size: 22px; color: #c2185b;
+        margin-top: 14px; font-size: min(22px, 5vw); color: #c2185b;
         min-height: 30px; text-align: center;
       }}
-      #info {{ margin-top: 8px; color: #666; font-size: 14px; }}
+      #info {{
+        margin-top: 6px;
+        color: #666;
+        font-size: min(14px, 3.5vw);
+      }}
       button {{
         margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
-        background: #fff; cursor: pointer; border-radius: 6px; font-size: 14px;
+        background: #fff; cursor: pointer; border-radius: 6px;
+        font-size: min(14px, 3.6vw);
       }}
     </style>
     </head>
     <body>
-      <div id="info">Parejas encontradas: <span id="pairs">0</span> / 10</div>
+      <div id="info">Parejas encontradas: <span id="pairs">0</span> / 15</div>
       <div id="grid"></div>
       <div id="msg"></div>
       <button onclick="reset()">🔄 Reiniciar</button>
@@ -368,9 +383,10 @@ def juego_memorama():
     {CELEBRATION_SCRIPT}
 
     <script>
-      // 10 íconos únicos y visualmente distintos
+      // 15 íconos únicos y visualmente distintos
       const ICONS = [
-        '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖','🦋'
+        '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
+        '🦋','🌈','🍭','🩵','🎁','🐣'
       ];
 
       let first = null, lock = false, matched = 0, celebrated = false;
@@ -442,7 +458,7 @@ def juego_memorama():
           card.classList.add('matched');
           matched++; first = null;
           pairsEl.textContent = matched;
-          if (matched === 10 && !celebrated) {{
+          if (matched === 15 && !celebrated) {{
             celebrated = true;
             msg.innerHTML = '🎀 ¡Es una niña! 🎀<br><strong>María</strong>';
             setTimeout(() => celebrate(), 250);
@@ -463,7 +479,7 @@ def juego_memorama():
     </body>
     </html>
     """
-    components.html(memory_html, height=600)
+    components.html(memory_html, height=560)
 
 
 # ============================================================
@@ -1206,8 +1222,8 @@ with tab1:
     juego_rasca()
 
 with tab2:
-    st.subheader("Encuentra las 10 parejas")
-    st.caption("Voltea las cartas y encuentra los 10 pares 👇")
+    st.subheader("Encuentra las 15 parejas")
+    st.caption("Voltea las cartas y encuentra los 15 pares 👇")
     juego_memorama()
 
 with tab3:
