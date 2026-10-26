@@ -402,18 +402,20 @@ def juego_memorama():
       }}
 
       // Genera 15 parejas: 6 de letras + 9 de emojis
-      // Cada pareja se identifica por un "key" único (no por el texto mostrado)
+      // IMPORTANTE: la "key" se basa en el SÍMBOLO visible,
+      // por lo que las dos A comparten la misma key ('letter_A')
+      // y cualquier A puede emparejarse con cualquier A.
       function buildPairs() {{
         const pairs = [];
-        // Letras: cada posición tiene un key único para no confundir las 2 A
-        LETTER_ICONS.forEach((letter, i) => {{
+        // Letras: usamos el carácter como key
+        LETTER_ICONS.forEach((letter) => {{
           pairs.push({{
-            key: 'letter_' + i,   // letra_A1, letra_A2, etc.
+            key: 'letter_' + letter,   // ambas A → 'letter_A'
             display: letter,
             isLetter: true
           }});
         }});
-        // Emojis
+        // Emojis: key basada en el emoji
         EMOJI_ICONS.forEach(icon => {{
           pairs.push({{
             key: 'emoji_' + icon,
@@ -481,6 +483,7 @@ def juego_memorama():
             card.classList.contains('matched')) return;
         card.classList.add('flipped');
         if (!first) {{ first = card; return; }}
+        // Comparación por KEY (símbolo visible), no por posición
         if (first.dataset.key === card.dataset.key) {{
           first.classList.add('matched');
           card.classList.add('matched');
