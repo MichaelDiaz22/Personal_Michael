@@ -213,6 +213,20 @@ def juego_memorama():
         background: #fff; border: 2px solid #cfe4ff;
         transform: rotateY(180deg);
       }}
+      /* Estilo especial para cartas con LETRAS */
+      .back.letter {{
+        font-size: min(40px, 9vw);
+        font-weight: 900;
+        color: #c2185b;
+        background: linear-gradient(180deg, #fff 0%, #ffeaf3 100%);
+        border: 2px solid #ffb3d1;
+        font-family: sans-serif;
+      }}
+      .card.matched .back.letter {{
+        background: linear-gradient(180deg, #ffd1e3, #ff6b9d 50%, #ffd1e3);
+        color: #fff;
+        border-color: #c2185b;
+      }}
       .card.matched .back {{ border-color: #ffb3d1; background: #fff0f7; }}
       #msg {{
         margin-top: 14px; font-size: min(20px, 5vw); color: #c2185b;
@@ -351,7 +365,7 @@ def juego_memorama():
           <div class="reel" id="r5">?</div>
         </div>
         <button id="spinBtn" onclick="spin()">🎲 Girar letras</button>
-        <div id="slotMsg">Pulsa <b>Girar</b> 3 veces para revelar el nombre</div>
+        <div id="slotMsg">Pulsa para mezclar las letras y encontrar el nombre oculto</div>
         <button id="replayBtn" onclick="reset()">🔄 Jugar de nuevo</button>
       </div>
 
@@ -359,10 +373,9 @@ def juego_memorama():
 
     <script>
       // ---------- MEMORAMA ----------
-      const ICONS = [
-        '🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖',
-        '🦋','🌈','🍭','🩵','🎁','🐣'
-      ];
+      // 6 letras que forman AMELIA + 9 íconos decorativos = 15 parejas
+      const LETTER_ICONS = ['A','M','E','L','I','A'];
+      const EMOJI_ICONS = ['🎀','⭐','🌸','🍼','🧸','👶','🎈','🌷','💖'];
 
       let first = null, lock = false, matched = 0, celebrated = false;
       let lastLayout = '';
@@ -388,13 +401,50 @@ def juego_memorama():
         return a;
       }}
 
+      // Genera 15 parejas: 6 de letras + 9 de emojis
+      // Cada pareja se identifica por un "key" único (no por el texto mostrado)
+      function buildPairs() {{
+        const pairs = [];
+        // Letras: cada posición tiene un key único para no confundir las 2 A
+        LETTER_ICONS.forEach((letter, i) => {{
+          pairs.push({{
+            key: 'letter_' + i,   // letra_A1, letra_A2, etc.
+            display: letter,
+            isLetter: true
+          }});
+        }});
+        // Emojis
+        EMOJI_ICONS.forEach(icon => {{
+          pairs.push({{
+            key: 'emoji_' + icon,
+            display: icon,
+            isLetter: false
+          }});
+        }});
+        return pairs;
+      }}
+
       function generateLayout() {{
         let attempt = 0;
         let cards;
         do {{
-          const rotated = shuffle(ICONS);
-          cards = shuffle([...rotated, ...rotated]);
-          const fingerprint = cards.join('');
+          const pairs = buildPairs();
+          // Duplicar cada pareja (2 cartas por pareja)
+          const doubled = [];
+          pairs.forEach(p => {{
+            doubled.push({{
+              key: p.key,
+              display: p.display,
+              isLetter: p.isLetter
+            }});
+            doubled.push({{
+              key: p.key,
+              display: p.display,
+              isLetter: p.isLetter
+            }});
+          }});
+          cards = shuffle(doubled);
+          const fingerprint = cards.map(c => c.key).join('|');
           if (fingerprint !== lastLayout) {{
             lastLayout = fingerprint;
             break;
@@ -411,14 +461,15 @@ def juego_memorama():
         pairsEl.textContent = '0';
 
         const cards = generateLayout();
-        cards.forEach((icon, index) => {{
+        cards.forEach((cardData, index) => {{
           const c = document.createElement('div');
           c.className = 'card';
-          c.dataset.icon = icon;
+          c.dataset.key = cardData.key;
           c.dataset.pos = index;
+          const backClass = cardData.isLetter ? 'back letter' : 'back';
           c.innerHTML = `<div class="inner">
               <div class="face">?</div>
-              <div class="back">${{icon}}</div>
+              <div class="${{backClass}}">${{cardData.display}}</div>
             </div>`;
           c.onclick = () => flip(c);
           grid.appendChild(c);
@@ -430,7 +481,7 @@ def juego_memorama():
             card.classList.contains('matched')) return;
         card.classList.add('flipped');
         if (!first) {{ first = card; return; }}
-        if (first.dataset.icon === card.dataset.icon) {{
+        if (first.dataset.key === card.dataset.key) {{
           first.classList.add('matched');
           card.classList.add('matched');
           matched++; first = null;
@@ -451,20 +502,20 @@ def juego_memorama():
       }}
 
       function reset() {{
-        // Reset memorama
         gameEl.classList.remove('hide');
         build();
-        // Reset tragamonedas
         slotEl.classList.remove('show');
-        reels.forEach((r, i) => {{
+        reels.forEach((r) => {{
           r.classList.remove('spinning', 'win');
           r.textContent = '?';
         }});
         spinCount = 0;
+        spinning = false;
+        revealed = false;
         spinBtn.disabled = false;
         spinBtn.textContent = '🎲 Girar letras';
         slotMsg.className = '';
-        slotMsg.innerHTML = 'Pulsa <b>Girar</b> 3 veces para revelar el nombre';
+        slotMsg.innerHTML = 'Pulsa para mezclar las letras y encontrar el nombre oculto';
         replayBtn.classList.remove('show');
       }}
 
@@ -483,12 +534,11 @@ def juego_memorama():
       function showSlot() {{
         gameEl.classList.add('hide');
         slotEl.classList.add('show');
-        // Mostrar las letras desordenadas aleatoriamente
         const shuffled = shuffle(LETTERS);
         reels.forEach((r, i) => {{
           r.textContent = shuffled[i];
         }});
-        slotMsg.innerHTML = 'Pulsa <b>Girar</b> para mezclar las letras';
+        slotMsg.innerHTML = 'Pulsa para mezclar las letras y encontrar el nombre oculto';
       }}
 
       function spin() {{
@@ -497,15 +547,13 @@ def juego_memorama():
         spinCount++;
         spinBtn.disabled = true;
 
-        // Animar todos los rodillos
         reels.forEach(r => r.classList.add('spinning'));
         slotMsg.className = '';
         slotMsg.innerHTML = `🎰 Girando... (${{spinCount}} / 3)`;
 
-        // Elegir resultado
         let finalLetters;
         if (spinCount >= 3) {{
-          // 3er giro → ordenar como "AMELIA"
+          // 3er giro → revelar AMELIA
           finalLetters = LETTERS.slice();
         }} else {{
           // Giros 1 y 2 → orden aleatorio distinto al correcto
@@ -516,7 +564,6 @@ def juego_memorama():
           }} while (finalLetters.join('') === NAME && attempt < 20);
         }}
 
-        // Detener rodillos escalonados
         reels.forEach((r, i) => {{
           setTimeout(() => {{
             r.classList.remove('spinning');
@@ -532,7 +579,6 @@ def juego_memorama():
         spinning = false;
 
         if (spinCount >= 3) {{
-          // Victoria
           revealed = true;
           spinBtn.disabled = true;
           spinBtn.textContent = '✅ ¡AMELIA!';
@@ -544,7 +590,7 @@ def juego_memorama():
         }} else {{
           spinBtn.disabled = false;
           const remaining = 3 - spinCount;
-          slotMsg.innerHTML = `Faltan <b>${{remaining}}</b> giro${{remaining > 1 ? 's' : ''}} más para revelar el nombre`;
+          slotMsg.innerHTML = `Faltan <b>${{remaining}}</b> giro${{remaining > 1 ? 's' : ''}} más`;
         }}
       }}
 
@@ -565,4 +611,4 @@ st.markdown("### 🃏 Memorama")
 juego_memorama()
 
 st.markdown("---")
-st.caption("💙 Hecho con amor para la llegada de Amelia 🎀")
+st.caption("💙 Hecho con amor 🎀")
