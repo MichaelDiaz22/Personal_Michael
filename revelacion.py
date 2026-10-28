@@ -3,7 +3,7 @@ import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Revelación de Género",
-    page_icon="💙",
+    page_icon="👶",
     layout="centered"
 )
 
@@ -15,7 +15,7 @@ st.markdown("""
   .main-title {
     text-align: center;
     font-size: 2.2rem;
-    background: linear-gradient(90deg, #2a4d8f, #4c6ef5);
+    background: linear-gradient(90deg, #2a4d8f, #c2185b);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     margin-bottom: 0.2rem;
@@ -28,7 +28,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-title">💙 Revelación de Género 💙</div>',
+st.markdown('<div class="main-title">🎀 Revelación de Género 💙</div>',
             unsafe_allow_html=True)
 st.markdown('<div class="subtitle">Encuentra las parejas para descubrir la sorpresa</div>',
             unsafe_allow_html=True)
@@ -43,7 +43,7 @@ SEED = st.session_state.reset_seed
 
 
 # ============================================================
-# ANIMACIÓN DE REVELACIÓN (azul para niño)
+# ANIMACIÓN DE REVELACIÓN (azul, niño)
 # ============================================================
 CELEBRATION_SCRIPT = """
 <script>
@@ -51,8 +51,8 @@ CELEBRATION_SCRIPT = """
     const overlay = document.createElement('div');
     overlay.style.cssText = `
       position: fixed; inset: 0; z-index: 9998;
-      background: radial-gradient(circle, rgba(207,228,255,.9) 0%,
-                  rgba(155,190,255,.9) 100%);
+      background: radial-gradient(circle, rgba(207,228,255,.92) 0%,
+                  rgba(155,190,255,.92) 100%);
       animation: flashFade 1.1s ease-out forwards;
       pointer-events: none;
     `;
@@ -108,7 +108,7 @@ CELEBRATION_SCRIPT = """
       msg.style.transition = 'opacity .6s';
       msg.style.opacity = '0';
       setTimeout(() => msg.remove(), 700);
-    }, 3200);
+    }, 3500);
   }
 </script>
 
@@ -141,7 +141,7 @@ CELEBRATION_SCRIPT = """
 
 
 # ============================================================
-# MEMORAMA + TRAGAMONEDAS (NIÑO, SIN NOMBRE)
+# MEMORAMA MIXTO CON REVELACIÓN DIRECTA
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -164,17 +164,18 @@ def juego_memorama():
         box-sizing: border-box;
       }}
 
-      /* ---------- MEMORAMA ---------- */
       #game {{
         display: flex; flex-direction: column; align-items: center;
         width: 100%;
         transition: opacity .6s;
       }}
       #game.hide {{ opacity: 0; pointer-events: none; height: 0; overflow: hidden; }}
+
       #info {{
         margin-top: 6px;
-        color: #666;
+        color: #6a5acd;
         font-size: min(14px, 3.5vw);
+        font-weight: 600;
       }}
       #grid {{
         display: grid;
@@ -195,6 +196,7 @@ def juego_memorama():
       }}
       .card.flipped .inner,
       .card.matched .inner {{ transform: rotateY(180deg); }}
+
       .face, .back {{
         position: absolute; inset: 0; border-radius: 8px;
         display: flex; align-items: center; justify-content: center;
@@ -202,131 +204,98 @@ def juego_memorama():
         backface-visibility: hidden;
         -webkit-backface-visibility: hidden;
       }}
+      /* Carta boca abajo: gradiente AZUL → ROSA (neutro) */
       .face {{
-        background: linear-gradient(135deg,#cfe4ff,#9bbfff);
+        background: linear-gradient(135deg,#cfe4ff 0%, #ffd1e3 100%);
         color: #fff;
         font-size: min(22px, 5vw);
+        box-shadow: 0 2px 6px rgba(100,100,150,.18);
       }}
       .back {{
-        background: #fff; border: 2px solid #cfe4ff;
+        background: #fff;
+        border: 2px solid #d4c5f0;
         transform: rotateY(180deg);
       }}
+      /* Pareja encontrada: borde lila suave + fondo mixto */
       .card.matched .back {{
-        border-color: #9bbfff;
-        background: #eef5ff;
+        border-color: #b8a4d6;
+        background: linear-gradient(135deg, #eef5ff 0%, #fff0f7 100%);
+        animation: matchPulse .5s ease-out;
       }}
+      @keyframes matchPulse {{
+        0%   {{ transform: rotateY(180deg) scale(1); }}
+        50%  {{ transform: rotateY(180deg) scale(1.08); }}
+        100% {{ transform: rotateY(180deg) scale(1); }}
+      }}
+
       #msg {{
-        margin-top: 14px; font-size: min(20px, 5vw); color: #2a4d8f;
+        margin-top: 14px; font-size: min(20px, 5vw); color: #6a5acd;
         min-height: 30px; text-align: center; font-weight: bold;
       }}
       #resetBtn {{
-        margin-top: 12px; padding: 8px 22px; border: 1px solid #999;
-        background: #fff; cursor: pointer; border-radius: 6px;
+        margin-top: 12px; padding: 8px 22px;
+        border: 1px solid #999;
+        background: #fff;
+        cursor: pointer; border-radius: 6px;
         font-size: min(14px, 3.6vw);
       }}
 
-      /* ---------- TRAGAMONEDAS ---------- */
-      #slot {{
+      /* ---------- REVELACIÓN INLINE (reemplaza al tragamonedas) ---------- */
+      #reveal {{
         display: none;
         flex-direction: column; align-items: center;
         margin-top: 10px;
-        animation: fadeIn .6s ease-out;
-      }}
-      #slot.show {{ display: flex; }}
-      @keyframes fadeIn {{
-        0% {{ opacity: 0; transform: translateY(20px); }}
-        100% {{ opacity: 1; transform: translateY(0); }}
-      }}
-      #slotTitle {{
-        color: #2a4d8f;
-        font-weight: bold;
-        font-size: min(20px, 5vw);
+        padding: 30px 40px;
+        border-radius: 20px;
+        background: linear-gradient(135deg, #cfe4ff 0%, #9bbfff 100%);
+        box-shadow: 0 12px 40px rgba(42,77,143,.35);
+        animation: revealIn .8s cubic-bezier(.2,1.5,.4,1);
         text-align: center;
-        margin-bottom: 12px;
       }}
-      #reels {{
-        display: flex; gap: min(10px, 2vw);
-        background: #1a2540;
-        padding: min(14px, 3vw);
-        border-radius: 16px;
-        box-shadow: 0 6px 20px rgba(0,0,0,.25);
+      #reveal.show {{ display: flex; }}
+      @keyframes revealIn {{
+        0%   {{ opacity: 0; transform: scale(0.5) rotate(-10deg); }}
+        60%  {{ opacity: 1; transform: scale(1.1) rotate(3deg); }}
+        100% {{ opacity: 1; transform: scale(1) rotate(0); }}
       }}
-      .reel {{
-        width: min(60px, 13vw);
-        height: min(80px, 18vw);
-        background: linear-gradient(180deg, #fff 0%, #eaf2ff 50%, #fff 100%);
-        border-radius: 8px;
-        display: flex; align-items: center; justify-content: center;
-        font-size: min(40px, 9vw);
+      #revealEmoji {{
+        font-size: min(80px, 20vw);
+        line-height: 1;
+        animation: floatUpDown 1.6s ease-in-out infinite;
+      }}
+      @keyframes floatUpDown {{
+        0%, 100% {{ transform: translateY(0); }}
+        50%      {{ transform: translateY(-12px); }}
+      }}
+      #revealTitle {{
+        font-size: min(46px, 11vw);
         font-weight: 900;
-        color: #2a4d8f;
-        box-shadow: inset 0 4px 10px rgba(0,0,0,.15);
-        overflow: hidden;
-        position: relative;
-        font-family: sans-serif;
-      }}
-      .reel.spinning {{
-        animation: spinBlur 0.12s linear infinite;
-      }}
-      @keyframes spinBlur {{
-        0% {{ transform: translateY(-15%); filter: blur(2px); }}
-        50% {{ transform: translateY(15%); filter: blur(3px); }}
-        100% {{ transform: translateY(-15%); filter: blur(2px); }}
-      }}
-      .reel.win {{
-        background: linear-gradient(180deg, #cfe4ff, #4c6ef5 50%, #cfe4ff);
-        color: #fff;
-        box-shadow: inset 0 4px 10px rgba(0,0,0,.15),
-                    0 0 25px rgba(76,110,245,.9);
-        animation: winPulse .8s ease-out;
-      }}
-      @keyframes winPulse {{
-        0%   {{ transform: scale(1); }}
-        40%  {{ transform: scale(1.15); }}
-        100% {{ transform: scale(1); }}
-      }}
-      #spinBtn {{
-        margin-top: 16px;
-        padding: 10px 28px;
-        font-size: min(16px, 4vw);
-        font-weight: bold;
+        margin-top: 8px;
         background: linear-gradient(90deg, #2a4d8f, #4c6ef5);
-        color: #fff;
-        border: none;
-        border-radius: 30px;
-        cursor: pointer;
-        box-shadow: 0 4px 10px rgba(42,77,143,.4);
-        transition: transform .15s;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        letter-spacing: 1px;
       }}
-      #spinBtn:hover:not(:disabled) {{ transform: scale(1.05); }}
-      #spinBtn:disabled {{
-        opacity: .5; cursor: not-allowed;
-        background: #888;
-        box-shadow: none;
-      }}
-      #slotMsg {{
-        margin-top: 14px;
-        font-size: min(16px, 4vw);
+      #revealSub {{
+        margin-top: 6px;
+        font-size: min(18px, 4.5vw);
         color: #2a4d8f;
-        font-weight: bold;
-        text-align: center;
-        min-height: 24px;
-      }}
-      #slotMsg.final {{
-        color: #2a4d8f;
-        font-size: min(22px, 5.5vw);
+        font-weight: 600;
+        opacity: .85;
       }}
       #replayBtn {{
-        display: none;
-        margin-top: 12px;
-        padding: 8px 22px;
-        border: 1px solid #999;
-        background: #fff;
-        border-radius: 6px;
+        margin-top: 18px;
+        padding: 10px 26px;
+        border: none;
+        background: linear-gradient(90deg, #2a4d8f, #4c6ef5);
+        color: #fff;
+        border-radius: 30px;
         cursor: pointer;
-        font-size: min(14px, 3.6vw);
+        font-size: min(15px, 3.8vw);
+        font-weight: bold;
+        box-shadow: 0 4px 10px rgba(42,77,143,.4);
       }}
-      #replayBtn.show {{ display: inline-block; }}
+      #replayBtn:hover {{ transform: scale(1.05); }}
     </style>
     </head>
     <body>
@@ -339,29 +308,27 @@ def juego_memorama():
         <button id="resetBtn" onclick="reset()">🔄 Reiniciar</button>
       </div>
 
-      <!-- TRAGAMONEDAS DE ÍCONOS -->
-      <div id="slot">
-        <div id="slotTitle">🎰 Ordena los íconos 🎰</div>
-        <div id="reels">
-          <div class="reel" id="r0">?</div>
-          <div class="reel" id="r1">?</div>
-          <div class="reel" id="r2">?</div>
-          <div class="reel" id="r3">?</div>
-          <div class="reel" id="r4">?</div>
-          <div class="reel" id="r5">?</div>
-        </div>
-        <button id="spinBtn" onclick="spin()">🎲 Girar íconos</button>
-        <div id="slotMsg">Pulsa para mezclar los íconos y encontrar la sorpresa</div>
+      <!-- REVELACIÓN DIRECTA -->
+      <div id="reveal">
+        <div id="revealEmoji">👶</div>
+        <div id="revealTitle">¡Es un niño!</div>
+        <div id="revealSub">¡Felicidades! 💙</div>
         <button id="replayBtn" onclick="reset()">🔄 Jugar de nuevo</button>
       </div>
 
     {CELEBRATION_SCRIPT}
 
     <script>
-      // ---------- MEMORAMA ----------
-      // 15 parejas: 9 íconos de niño + 6 íconos azules
-      const BOY_ICONS  = ['🚗','⚽','🦖','🚀','🧢','🏀','🎮','🐶','🦁'];
-      const BLUE_ICONS = ['💙','🩵','🔵','🐳','🌊','☁️'];
+      // ---------- 15 PAREJAS MIXTAS (niño + niña + bebé) ----------
+      // Sin duplicados, sin dos corazones azules
+      const ICONS = [
+        // Cosas de niño
+        '🚗','⚽','🦖','🚀','🎮',
+        // Cosas de niña
+        '🎀','🌸','👗','🦄','💖',
+        // Neutros / bebé
+        '🧸','👶','🍼','🎈','☁️'
+      ];
 
       let first = null, lock = false, matched = 0, celebrated = false;
       let lastLayout = '';
@@ -370,7 +337,7 @@ def juego_memorama():
       const msg = document.getElementById('msg');
       const pairsEl = document.getElementById('pairs');
       const gameEl = document.getElementById('game');
-      const slotEl = document.getElementById('slot');
+      const revealEl = document.getElementById('reveal');
 
       function randInt(max) {{
         const buf = new Uint32Array(1);
@@ -387,30 +354,17 @@ def juego_memorama():
         return a;
       }}
 
-      // Todas las parejas se identifican por el SÍMBOLO visible
-      function buildPairs() {{
-        const pairs = [];
-        BOY_ICONS.forEach(icon => {{
-          pairs.push({{ key: 'icon_' + icon, display: icon }});
-        }});
-        BLUE_ICONS.forEach(icon => {{
-          pairs.push({{ key: 'icon_' + icon, display: icon }});
-        }});
-        return pairs;
-      }}
-
       function generateLayout() {{
         let attempt = 0;
         let cards;
         do {{
-          const pairs = buildPairs();
           const doubled = [];
-          pairs.forEach(p => {{
-            doubled.push({{ key: p.key, display: p.display }});
-            doubled.push({{ key: p.key, display: p.display }});
+          ICONS.forEach(icon => {{
+            doubled.push(icon);
+            doubled.push(icon);
           }});
           cards = shuffle(doubled);
-          const fingerprint = cards.map(c => c.key).join('|');
+          const fingerprint = cards.join('|');
           if (fingerprint !== lastLayout) {{
             lastLayout = fingerprint;
             break;
@@ -427,14 +381,14 @@ def juego_memorama():
         pairsEl.textContent = '0';
 
         const cards = generateLayout();
-        cards.forEach((cardData, index) => {{
+        cards.forEach((icon, index) => {{
           const c = document.createElement('div');
           c.className = 'card';
-          c.dataset.key = cardData.key;
+          c.dataset.icon = icon;
           c.dataset.pos = index;
           c.innerHTML = `<div class="inner">
               <div class="face">?</div>
-              <div class="back">${{cardData.display}}</div>
+              <div class="back">${{icon}}</div>
             </div>`;
           c.onclick = () => flip(c);
           grid.appendChild(c);
@@ -446,7 +400,7 @@ def juego_memorama():
             card.classList.contains('matched')) return;
         card.classList.add('flipped');
         if (!first) {{ first = card; return; }}
-        if (first.dataset.key === card.dataset.key) {{
+        if (first.dataset.icon === card.dataset.icon) {{
           first.classList.add('matched');
           card.classList.add('matched');
           matched++; first = null;
@@ -454,7 +408,7 @@ def juego_memorama():
           if (matched === 15 && !celebrated) {{
             celebrated = true;
             msg.innerHTML = '🎉 ¡Completaste todas las parejas!';
-            setTimeout(showSlot, 900);
+            setTimeout(showReveal, 900);
           }}
         }} else {{
           lock = true;
@@ -466,93 +420,16 @@ def juego_memorama():
         }}
       }}
 
+      function showReveal() {{
+        gameEl.classList.add('hide');
+        revealEl.classList.add('show');
+        setTimeout(() => celebrate(), 400);
+      }}
+
       function reset() {{
         gameEl.classList.remove('hide');
+        revealEl.classList.remove('show');
         build();
-        slotEl.classList.remove('show');
-        reels.forEach((r) => {{
-          r.classList.remove('spinning', 'win');
-          r.textContent = '?';
-        }});
-        spinCount = 0;
-        spinning = false;
-        revealed = false;
-        spinBtn.disabled = false;
-        spinBtn.textContent = '🎲 Girar íconos';
-        slotMsg.className = '';
-        slotMsg.innerHTML = 'Pulsa para mezclar los íconos y encontrar la sorpresa';
-        replayBtn.classList.remove('show');
-      }}
-
-      // ---------- TRAGAMONEDAS DE ÍCONOS ----------
-      // Conjunto decorativo de 6 íconos que se barajan en los rodillos
-      const SLOT_ICONS = ['🚗','⚽','🦖','🚀','🧢','🏀'];
-      const reels = [0,1,2,3,4,5].map(i => document.getElementById('r' + i));
-      const spinBtn = document.getElementById('spinBtn');
-      const slotMsg = document.getElementById('slotMsg');
-      const replayBtn = document.getElementById('replayBtn');
-
-      let spinCount = 0;
-      let spinning = false;
-      let revealed = false;
-
-      function showSlot() {{
-        gameEl.classList.add('hide');
-        slotEl.classList.add('show');
-        const shuffled = shuffle(SLOT_ICONS);
-        reels.forEach((r, i) => {{
-          r.textContent = shuffled[i];
-        }});
-        slotMsg.innerHTML = 'Pulsa para mezclar los íconos y encontrar la sorpresa';
-      }}
-
-      function spin() {{
-        if (spinning || revealed) return;
-        spinning = true;
-        spinCount++;
-        spinBtn.disabled = true;
-
-        reels.forEach(r => r.classList.add('spinning'));
-        slotMsg.className = '';
-        slotMsg.innerHTML = `🎰 Girando... (${{spinCount}} / 3)`;
-
-        let finalIcons;
-        if (spinCount >= 3) {{
-          // 3er giro → alinear los 6 íconos (momento de revelación)
-          finalIcons = SLOT_ICONS.slice();
-        }} else {{
-          // Giros 1 y 2 → mezcla aleatoria
-          finalIcons = shuffle(SLOT_ICONS);
-        }}
-
-        reels.forEach((r, i) => {{
-          setTimeout(() => {{
-            r.classList.remove('spinning');
-            r.textContent = finalIcons[i];
-            if (i === reels.length - 1) {{
-              finishSpin(finalIcons);
-            }}
-          }}, 600 + i * 200);
-        }});
-      }}
-
-      function finishSpin(finalIcons) {{
-        spinning = false;
-
-        if (spinCount >= 3) {{
-          revealed = true;
-          spinBtn.disabled = true;
-          spinBtn.textContent = '💙 ¡LISTO!';
-          reels.forEach(r => r.classList.add('win'));
-          slotMsg.className = 'final';
-          slotMsg.innerHTML = '💙 ¡Es un niño! 💙';
-          replayBtn.classList.add('show');
-          setTimeout(() => celebrate(), 400);
-        }} else {{
-          spinBtn.disabled = false;
-          const remaining = 3 - spinCount;
-          slotMsg.innerHTML = `Faltan <b>${{remaining}}</b> giro${{remaining > 1 ? 's' : ''}} más`;
-        }}
       }}
 
       // Init
