@@ -43,105 +43,7 @@ SEED = st.session_state.reset_seed
 
 
 # ============================================================
-# ANIMACIÓN DE REVELACIÓN (azul, niño)
-# ============================================================
-CELEBRATION_SCRIPT = """
-<script>
-  function celebrate() {
-    const overlay = document.createElement('div');
-    overlay.style.cssText = `
-      position: fixed; inset: 0; z-index: 9998;
-      background: radial-gradient(circle, rgba(207,228,255,.92) 0%,
-                  rgba(155,190,255,.92) 100%);
-      animation: flashFade 1.1s ease-out forwards;
-      pointer-events: none;
-    `;
-    document.body.appendChild(overlay);
-    setTimeout(() => overlay.remove(), 1200);
-
-    const EMOJIS = ['🎉','💙','🩵','⭐','✨','🚀','🚗','⚽','👶','🎈'];
-    const N = 70;
-    for (let i = 0; i < N; i++) {
-      const p = document.createElement('div');
-      const emoji = EMOJIS[Math.floor(Math.random() * EMOJIS.length)];
-      p.textContent = emoji;
-      const startX = 50 + (Math.random() - 0.5) * 30;
-      const startY = 50 + (Math.random() - 0.5) * 20;
-      const dx = (Math.random() - 0.5) * 140;
-      const dy = (Math.random() - 0.5) * 140;
-      const rot = Math.random() * 720 - 360;
-      const size = 16 + Math.random() * 22;
-      const delay = Math.random() * 0.25;
-      p.style.cssText = `
-        position: fixed; z-index: 9999; pointer-events: none;
-        left: ${startX}%; top: ${startY}%;
-        font-size: ${size}px;
-        transform: translate(-50%, -50%);
-        opacity: 0;
-        animation: burst 1.6s ease-out ${delay}s forwards;
-        --dx: ${dx}vw; --dy: ${dy}vh; --rot: ${rot}deg;
-      `;
-      document.body.appendChild(p);
-      setTimeout(() => p.remove(), 2200);
-    }
-
-    const msg = document.createElement('div');
-    msg.innerHTML = `
-      <div style="font-size: 70px; line-height: 1;">💙</div>
-      <div style="font-size: 44px; font-weight: 900;
-                  background: linear-gradient(90deg,#2a4d8f,#4c6ef5);
-                  -webkit-background-clip: text;
-                  -webkit-text-fill-color: transparent;
-                  margin-top: 4px;">¡Es un niño!</div>
-    `;
-    msg.style.cssText = `
-      position: fixed; z-index: 10000; pointer-events: none;
-      left: 50%; top: 50%; transform: translate(-50%, -50%) scale(0);
-      text-align: center; font-family: sans-serif;
-      background: rgba(255,255,255,.95);
-      padding: 30px 48px; border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(42,77,143,.45);
-      animation: revealPop 1.4s cubic-bezier(.2,1.5,.4,1) forwards;
-    `;
-    document.body.appendChild(msg);
-    setTimeout(() => {
-      msg.style.transition = 'opacity .6s';
-      msg.style.opacity = '0';
-      setTimeout(() => msg.remove(), 700);
-    }, 3500);
-  }
-</script>
-
-<style>
-  @keyframes flashFade {
-    0% { opacity: 0; }
-    25% { opacity: 1; }
-    100% { opacity: 0; }
-  }
-  @keyframes burst {
-    0% {
-      opacity: 0;
-      transform: translate(-50%, -50%) scale(0.3) rotate(0);
-    }
-    15% { opacity: 1; }
-    100% {
-      opacity: 0;
-      transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy)))
-                 scale(1) rotate(var(--rot));
-    }
-  }
-  @keyframes revealPop {
-    0%   { transform: translate(-50%, -50%) scale(0) rotate(-15deg); }
-    55%  { transform: translate(-50%, -50%) scale(1.15) rotate(4deg); }
-    75%  { transform: translate(-50%, -50%) scale(0.95) rotate(-2deg); }
-    100% { transform: translate(-50%, -50%) scale(1) rotate(0); }
-  }
-</style>
-"""
-
-
-# ============================================================
-# MEMORAMA MIXTO CON REVELACIÓN DIRECTA
+# MEMORAMA MIXTO + ENLACE A REVELACIÓN EXTERNA
 # ============================================================
 def juego_memorama():
     memory_html = f"""
@@ -216,7 +118,6 @@ def juego_memorama():
         border: 2px solid #d4c5f0;
         transform: rotateY(180deg);
       }}
-      /* Pareja encontrada: borde lila suave + fondo mixto */
       .card.matched .back {{
         border-color: #b8a4d6;
         background: linear-gradient(135deg, #eef5ff 0%, #fff0f7 100%);
@@ -240,62 +141,75 @@ def juego_memorama():
         font-size: min(14px, 3.6vw);
       }}
 
-      /* ---------- REVELACIÓN INLINE (reemplaza al tragamonedas) ---------- */
+      /* ---------- RECUADRO CON ENLACE A REVELACIÓN ---------- */
       #reveal {{
         display: none;
         flex-direction: column; align-items: center;
         margin-top: 10px;
-        padding: 30px 40px;
+        padding: 30px 32px;
         border-radius: 20px;
-        background: linear-gradient(135deg, #cfe4ff 0%, #9bbfff 100%);
-        box-shadow: 0 12px 40px rgba(42,77,143,.35);
+        background: linear-gradient(135deg, #cfe4ff 0%, #ffd1e3 100%);
+        box-shadow: 0 12px 40px rgba(106,90,205,.3);
         animation: revealIn .8s cubic-bezier(.2,1.5,.4,1);
         text-align: center;
+        max-width: min(480px, 92vw);
+        box-sizing: border-box;
       }}
       #reveal.show {{ display: flex; }}
       @keyframes revealIn {{
-        0%   {{ opacity: 0; transform: scale(0.5) rotate(-10deg); }}
-        60%  {{ opacity: 1; transform: scale(1.1) rotate(3deg); }}
-        100% {{ opacity: 1; transform: scale(1) rotate(0); }}
+        0%   {{ opacity: 0; transform: scale(0.6); }}
+        60%  {{ opacity: 1; transform: scale(1.06); }}
+        100% {{ opacity: 1; transform: scale(1); }}
       }}
       #revealEmoji {{
-        font-size: min(80px, 20vw);
+        font-size: min(70px, 18vw);
         line-height: 1;
         animation: floatUpDown 1.6s ease-in-out infinite;
       }}
       @keyframes floatUpDown {{
         0%, 100% {{ transform: translateY(0); }}
-        50%      {{ transform: translateY(-12px); }}
+        50%      {{ transform: translateY(-10px); }}
       }}
       #revealTitle {{
-        font-size: min(46px, 11vw);
+        font-size: min(26px, 6.5vw);
         font-weight: 900;
-        margin-top: 8px;
-        background: linear-gradient(90deg, #2a4d8f, #4c6ef5);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        letter-spacing: 1px;
+        margin-top: 10px;
+        color: #4a3a8f;
+        letter-spacing: .5px;
       }}
       #revealSub {{
-        margin-top: 6px;
-        font-size: min(18px, 4.5vw);
-        color: #2a4d8f;
-        font-weight: 600;
-        opacity: .85;
+        margin-top: 8px;
+        font-size: min(15px, 3.8vw);
+        color: #5a4a9f;
+        font-weight: 500;
+        line-height: 1.4;
       }}
-      #replayBtn {{
+      #revealLink {{
+        display: inline-block;
         margin-top: 18px;
-        padding: 10px 26px;
+        padding: 12px 28px;
         border: none;
-        background: linear-gradient(90deg, #2a4d8f, #4c6ef5);
+        background: linear-gradient(90deg, #2a4d8f, #c2185b);
         color: #fff;
         border-radius: 30px;
         cursor: pointer;
-        font-size: min(15px, 3.8vw);
+        font-size: min(16px, 4vw);
         font-weight: bold;
-        box-shadow: 0 4px 10px rgba(42,77,143,.4);
+        box-shadow: 0 4px 12px rgba(106,90,205,.4);
+        text-decoration: none;
+        transition: transform .15s;
       }}
-      #replayBtn:hover {{ transform: scale(1.05); }}
+      #revealLink:hover {{ transform: scale(1.05); }}
+      #replayBtn {{
+        margin-top: 14px;
+        padding: 8px 22px;
+        border: 1px solid #999;
+        background: #fff;
+        color: #555;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: min(13px, 3.4vw);
+      }}
     </style>
     </head>
     <body>
@@ -308,19 +222,25 @@ def juego_memorama():
         <button id="resetBtn" onclick="reset()">🔄 Reiniciar</button>
       </div>
 
-      <!-- REVELACIÓN DIRECTA -->
+      <!-- RECUADRO CON ENLACE A LA REVELACIÓN -->
       <div id="reveal">
-        <div id="revealEmoji">👶</div>
-        <div id="revealTitle">¡Es un niño!</div>
-        <div id="revealSub">¡Felicidades! 💙</div>
+        <div id="revealEmoji">🎁</div>
+        <div id="revealTitle">¡Completaste el memorama!</div>
+        <div id="revealSub">
+          Haz clic en el botón para descubrir<br>
+          la revelación de género del bebé 💙🎀
+        </div>
+        <a id="revealLink"
+           href="https://drive.google.com/drive/u/0/folders/1e5KHCM0RWav939qaWnXrFyUGS6c2v9go"
+           target="_blank"
+           rel="noopener noreferrer">
+          🎬 Ver revelación
+        </a>
         <button id="replayBtn" onclick="reset()">🔄 Jugar de nuevo</button>
       </div>
 
-    {CELEBRATION_SCRIPT}
-
     <script>
       // ---------- 15 PAREJAS MIXTAS (niño + niña + bebé) ----------
-      // Sin duplicados, sin dos corazones azules
       const ICONS = [
         // Cosas de niño
         '🚗','⚽','🦖','🚀','🎮',
@@ -423,7 +343,6 @@ def juego_memorama():
       function showReveal() {{
         gameEl.classList.add('hide');
         revealEl.classList.add('show');
-        setTimeout(() => celebrate(), 400);
       }}
 
       function reset() {{
