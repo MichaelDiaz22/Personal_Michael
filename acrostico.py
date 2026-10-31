@@ -6,38 +6,50 @@ import streamlit as st
 st.set_page_config(page_title="Revelación de Género - Crucigrama", page_icon="🍼", layout="centered")
 
 # ============================================================
-# DATOS DEL ACROSTICO Y POSICIONES
-# (respuesta_correcta, índice_letra_acrostico, fila, columna_inicial)
+# DEFINICIÓN DEL CRUCIGRAMA
+# (respuesta, col_inicio, col_acrostico)
 # ============================================================
 PALABRAS = [
-    ("PIJAMA",  2, 0, 2),  # J
-    ("JUGUETE", 1, 1, 2),  # U
-    ("CAMA",    1, 2, 1),  # A
-    ("LOCIÓN",  5, 3, 2),  # N
-    ("MAMÁ",    1, 4, 2),  # A
-    ("MANTA",   2, 5, 2),  # N
-    ("DIENTE",  0, 6, 0),  # D
-    ("ARRULLO", 2, 7, 2),  # R
-    ("PAÑALES", 5, 8, 2),  # E
-    ("SILLA",   0, 9, 2),  # S
+    ("PIJAMA",  2, 2),  # Fila 1: J
+    ("JUGUETE", 2, 2),  # Fila 2: U
+    ("CAMA",    1, 2),  # Fila 3: A
+    ("LOCIÓN",  2, 2),  # Fila 4: N
+    ("MAMÁ",    2, 2),  # Fila 5: A
+    ("MANTA",   2, 2),  # Fila 6: N
+    ("DIENTE",  0, 6),  # Fila 7: D (empieza en col 0, cruza en col 6)
+    ("ARRULLO", 2, 2),  # Fila 8: R
+    ("PAÑALES", 2, 2),  # Fila 9: E
+    ("SILLA",   2, 2),  # Fila 10: S
 ]
 
-COL_ACROSTICO = 2  # La columna donde caen las letras del nombre (0-index)
+# El mapa visual exacto de tu imagen (N = Número/Negro, X = Letra, _ = Vacío)
+# Esto asegura que las filas largas como ARRULLO (8 letras) y PAÑALES (8 letras) quepan bien.
+MAPA_VISUAL = {
+    0:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X", 7: "X"},
+    1:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X", 7: "X", 8: "X"},
+    2:  {1: "N", 2: "X", 3: "X", 4: "X"},
+    3:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X", 7: "X"},
+    4:  {2: "N", 3: "X", 4: "X", 5: "X"},
+    5:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X"},
+    6:  {0: "N", 1: "X", 2: "X", 3: "X", 4: "X", 5: "X", 6: "X"},
+    7:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X", 7: "X", 8: "X", 9: "X"},
+    8:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X", 7: "X", 8: "X", 9: "X"},
+    9:  {2: "N", 3: "X", 4: "X", 5: "X", 6: "X", 7: "X"},
+}
+
 MAX_FILAS = 10
-MAX_COLS = 7
+MAX_COLS = 11  # Ampliado para que quepan las palabras más largas
 
 # ============================================================
 # ESTADO INICIAL
 # ============================================================
 if "respuestas" not in st.session_state:
-    # Matriz para guardar lo que escribe el usuario en cada celda
     st.session_state.respuestas = [["" for _ in range(MAX_COLS)] for _ in range(MAX_FILAS)]
-
 if "verificado" not in st.session_state:
     st.session_state.verificado = False
 
 # ============================================================
-# FUNCIONES DE VALIDACIÓN
+# FUNCIONES
 # ============================================================
 def normalizar(s):
     return s.strip().upper().replace("Á","A").replace("É","E").replace("Í","I")\
@@ -45,77 +57,70 @@ def normalizar(s):
 
 def es_palabra_correcta(fila_idx):
     respuesta_correcta = PALABRAS[fila_idx][0]
-    palabra_usuario = ""
+    col_inicio = PALABRAS[fila_idx][1]
     
-    # Reconstruir la palabra leyendo la fila de la matriz
+    # Extraer solo las letras que pertenecen a la palabra según el mapa
+    palabra_usuario = ""
     for c in range(MAX_COLS):
-        if st.session_state.respuestas[fila_idx][c] != "":
+        if MAPA_VISUAL[fila_idx].get(c) == "X":
             palabra_usuario += st.session_state.respuestas[fila_idx][c]
-        else:
-            # Rellenar con espacio para mantener las posiciones relativas si se deja en blanco
-            palabra_usuario += " "
-
-    # Comparar ignorando espacios extra
-    return normalizar(palabra_usuario.replace(" ", "")) == normalizar(respuesta_correcta)
+            
+    return normalizar(palabra_usuario) == normalizar(respuesta_correcta)
 
 # ============================================================
-# ESTILOS CSS
+# ESTILOS CSS (Para simular el crucigrama)
 # ============================================================
 st.markdown("""
 <style>
     /* Ocultar etiquetas de los inputs */
     div[data-testid="stTextInput"] label { display: none; }
     
-    /* Estilo base para las cajas de texto */
+    /* Estilo de las casillas de texto (blancas) */
     div[data-testid="stTextInput"] input {
         text-align: center;
         font-weight: bold;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         padding: 0;
-        height: 45px;
+        height: 40px;
         border-radius: 0;
         text-transform: uppercase;
+        border: 1px solid #999;
     }
     
-    /* Colores de los bordes según validación */
-    .st-emotion-cache-1vbkxwb { /* Clase base de Streamlit, puede variar */
-        border-color: #ccc;
-    }
-    
-    /* Ajustar márgenes de las columnas para simular cuadrícula */
+    /* Quitar márgenes a las columnas para que se toquen */
     div[data-testid="column"] {
         padding: 0px !important;
         margin: 0px !important;
     }
 
-    /* Estilo para los números negros */
+    /* Cuadros negros con el número */
     .celda-negra {
         background-color: #1A1A1A;
         color: white;
-        height: 45px;
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
         border: 1px solid #333;
     }
     
-    /* Estilo para las casillas vacías donde no hay palabra */
+    /* Espacios vacíos */
     .celda-vacia {
-        height: 45px;
+        height: 40px;
         border: 1px solid transparent;
     }
 
-    /* Estilo para las celdas de la columna del acróstico */
-    .acro-cell div[data-testid="stTextInput"] input {
-        background-color: #BBDEFB !important; /* Azul claro */
-        border: 1px solid #1976D2 !important;
+    /* Forzar que la columna del acróstico sea azul */
+    .acro-col div[data-testid="stTextInput"] input {
+        background-color: #94B8D6 !important; /* Azul del crucigrama */
+        border: 1px solid #3A6A94 !important;
     }
     
-    /* Feedback de color rojo/verde */
-    .texto-error { color: #C62828; font-weight: bold; text-align: center; font-size: 0.9rem; margin-top: -10px;}
-    .texto-ok { color: #2E7D32; font-weight: bold; text-align: center; font-size: 0.9rem; margin-top: -10px;}
+    /* Mensajes de validación */
+    .texto-error { color: #C62828; font-weight: bold; text-align: center; font-size: 0.85rem; margin-top: 2px; margin-bottom: 10px;}
+    .texto-ok { color: #2E7D32; font-weight: bold; text-align: center; font-size: 0.85rem; margin-top: 2px; margin-bottom: 10px;}
     
     .exito {
         background: linear-gradient(135deg,#A5D6A7,#C8E6C9);
@@ -127,68 +132,59 @@ st.markdown("""
 
 st.markdown("<h2 style='text-align:center;color:#C2185B;'>🍼 Revelación de Género 🍼</h2>", unsafe_allow_html=True)
 st.markdown("<p style='text-align:center;'>Escribe una letra por casilla para descubrir el nombre oculto.</p>", unsafe_allow_html=True)
-
-# ============================================================
-# CONSTRUCCIÓN DE LA CUADRÍCULA (CRUCIGRAMA)
-# ============================================================
 st.write("---")
 
+# ============================================================
+# RENDERIZAR LA CUADRÍCULA
+# ============================================================
 for f in range(MAX_FILAS):
     cols = st.columns(MAX_COLS)
     
-    # Determinar dónde empieza y termina la palabra de esta fila
-    _, _, _, col_inicio = PALABRAS[f]
-    longitud_palabra = len(PALABRAS[f][0])
-    col_fin = col_inicio + longitud_palabra
-    
     for c in range(MAX_COLS):
+        tipo_celda = MAPA_VISUAL[f].get(c, "_")
         
-        # 1. ES LA COLUMNA DEL ACRÓSTICO
-        if c == COL_ACROSTICO:
-            with cols[c]:
-                st.markdown("<div class='acro-cell'>", unsafe_allow_html=True)
+        with cols[c]:
+            # 1. CUADRO NEGRO (Número)
+            if tipo_celda == "N":
+                # El número es f+1 (Fila 1, Fila 2, etc.)
+                st.markdown(f"<div class='celda-negra'>{f+1}</div>", unsafe_allow_html=True)
+                
+            # 2. LETRA (Input)
+            elif tipo_celda == "X":
+                # Si es la columna del acróstico (columna 6), le ponemos la clase azul
+                es_acrostico = (c == 6)
+                clase_extra = "acro-col" if es_acrostico else ""
+                
+                if clase_extra:
+                    st.markdown("<div class='acro-col'>", unsafe_allow_html=True)
+                
                 val = st.text_input(
                     label=f"celda_{f}_{c}", 
                     value=st.session_state.respuestas[f][c], 
                     max_chars=1, 
                     key=f"input_{f}_{c}"
                 )
-                st.markdown("</div>", unsafe_allow_html=True)
                 
-                # Actualizar estado
+                if clase_extra:
+                    st.markdown("</div>", unsafe_allow_html=True)
+                
+                # Guardar en memoria
                 if val != st.session_state.respuestas[f][c]:
                     st.session_state.respuestas[f][c] = val.upper()
                     st.session_state.verificado = False
-
-        # 2. CASILLAS DE LA PALABRA HORIZONTAL
-        elif col_inicio <= c < col_fin:
-            with cols[c]:
-                # Si es la primera letra, mostramos el número de la pista
-                if c == col_inicio:
-                    # Truco visual: usamos un HTML que parece celda negra
-                    st.markdown(f"<div class='celda-negra'>{f+1}</div>", unsafe_allow_html=True)
-                else:
-                    val = st.text_input(
-                        label=f"celda_{f}_{c}", 
-                        value=st.session_state.respuestas[f][c], 
-                        max_chars=1, 
-                        key=f"input_{f}_{c}"
-                    )
-                    if val != st.session_state.respuestas[f][c]:
-                        st.session_state.respuestas[f][c] = val.upper()
-                        st.session_state.verificado = False
-        
-        # 3. CASILLAS VACÍAS (Fondo transparente)
-        else:
-            with cols[c]:
+                    
+            # 3. VACÍO
+            else:
                 st.markdown("<div class='celda-vacia'></div>", unsafe_allow_html=True)
                 
-    # Validación visual por fila (Debajo de la fila)
+    # Feedback por fila (debajo de cada palabra)
     if st.session_state.verificado:
         if es_palabra_correcta(f):
-            st.markdown(f"<div class='texto-ok'>Fila {f+1}: ¡Correcto! ✅</div>", unsafe_allow_html=True)
-        elif any(st.session_state.respuestas[f]): # Solo si escribió algo
+            st.markdown(f"<div class='texto-ok'>Fila {f+1} correcta ✅</div>", unsafe_allow_html=True)
+        elif any(st.session_state.respuestas[f]): # Solo si el usuario escribió algo
             st.markdown(f"<div class='texto-error'>Fila {f+1}: Revisa esta palabra ❌</div>", unsafe_allow_html=True)
+        else:
+            st.write("") # Espacio para mantener la alineación
 
 st.write("---")
 
@@ -203,10 +199,9 @@ if st.button("🔍 Verificar respuestas", use_container_width=True, type="primar
 # ============================================================
 todas_correctas = all(es_palabra_correcta(i) for i in range(len(PALABRAS)))
 
-# Verificar que la columna vertical forme JUAN ANDRES
-acrostico_formado = "".join([st.session_state.respuestas[i][COL_ACROSTICO] for i in range(MAX_FILAS)])
-acrostico_formado = normalizar(acrostico_formado)
-acrostico_correcto = acrostico_formado == "JUANANDRES"
+# Verificar que la columna 6 forme JUAN ANDRES
+acrostico_formado = "".join([st.session_state.respuestas[i][6] for i in range(MAX_FILAS)])
+acrostico_correcto = normalizar(acrostico_formado) == "JUANANDRES"
 
 if st.session_state.verificado and todas_correctas and acrostico_correcto:
     st.balloons()
